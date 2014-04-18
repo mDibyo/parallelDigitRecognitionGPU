@@ -27,6 +27,10 @@ void rotate_ccw_90(float *arr, int width) {
 
 }
 
+__global__ void reductionKernel(float* A, int len, int level);
+
+__global__ void leastDistancekernel (float* A, float* B, float* C, int len);
+
 /* Returns the squared Euclidean distance between TEMPLATE and IMAGE. The size of IMAGE
  * is I_WIDTH * I_HEIGHT, while TEMPLATE is square with side length T_WIDTH. The template
  * image should be flipped, rotated, and translated across IMAGE.
