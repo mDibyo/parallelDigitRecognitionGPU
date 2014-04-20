@@ -29,13 +29,7 @@ void rotate_ccw_90(float *arr, int width) {
 
 __global__ void reductionKernel(float* A, int len, int level);
 
-__global__ void leastDistanceKernel (float* A, float* B, float* C, int len);
-
-__global__ void leastDistance4096Kernel(float *image, float *temp, float *result, int i, int j) {
-  float dist = temp[blockIdx.y*4096 + blockIdx.x*512 + threadIdx.x] - image[]
-  result[blockIdx.y*4096 + blockIdx.x*512 + threadIdx.x] =
-    () * ()
-}
+__global__ void leastDistanceKernel (float* A, float* B, float* C, int len)
 
 /* Returns the squared Euclidean distance between TEMPLATE and IMAGE. The size of IMAGE
  * is I_WIDTH * I_HEIGHT, while TEMPLATE is square with side length T_WIDTH. The template
@@ -60,13 +54,14 @@ float calc_min_dist(float *image, int i_width, int i_height, float *temp, int t_
   int translation_width = i_width - t_width + 1;
   int translation_height = i_height - t_width + 1;
   int blocks_per_comparison = 1;
-  
-  float *gpu_image, *gpu_temp;
-  CUDA_SAFE_CALL(cudaMalloc(&gpu_image, i_width*i_height));
-  CUDA_SAFE_CALL(cudaMalloc(gpu_image, image, i_width*i_height, cudaMemcpyHostToDevice));
-  CUDA_SAFE_CALL(cudaMalloc(&gpu_temp, t_width * t_width));
-  CUDA_SAFE_CALL(cudaMalloc(gpu_temp, temp, t_width*t_width, cudaMemcpyHostToDevice));
 
+  // given t_width = 4096, i_width = 4196, i_height = 4196
+  // given t_width = 512, i_width = 612, i_height = 712 [ 16, 4096 ]
+  // 
+  // for (int i = 0; i < i_height; i ++) {
+  //   for (int j = 0; j < i_width; j++) {}
+  // }
+  
   if (t_width <= 512) {
     blocks_per_comparison = 512;
     for (int i = 0; i < translation_height; i++) {
@@ -90,20 +85,14 @@ float calc_min_dist(float *image, int i_width, int i_height, float *temp, int t_
     }
   } else if (t_width >= 4096) {
     size_t arraySize = translation_width * translation_height * sizeof(float);
-    // float* result = (float *)malloc(arraySize);
-    float* gpu_result;
-    CUDA_SAFE_CALL(cudaMalloc(gpu_result, arraySize));
     blocks_per_comparison = 32768;
     for (int i = 0; i < translation_height; i++) {
       for (int j = 0; j < translation_width; j++) {
         dim3 dim_threads_per_block(threads_per_block, 1, 1);
-        dim3 dim_blocks_per_grid(8, 4096);
-        leastDistance4096Kernel<<<dim_blocks_per_grid, dim_threads_per_block>>>(gpu_image, gpu_temp, gpu_result, translation_width, i, j);
-        cudaThreadSynchronize();
-        CUT_CHECK_ERROR("");
+        dim3 dim_blocks_per_grid(4096, 8);
+        leastDistanceKernel4096<<<dim_blocks_per_grid, dim_threads_per_block>>>(i, j)
       }
     }
-
   }
 
 
