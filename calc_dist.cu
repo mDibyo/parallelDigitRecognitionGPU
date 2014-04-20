@@ -41,11 +41,42 @@ __global__ void leastDistance4096Kernel(float *image, float *temp, float *result
   result[blockIdx.x*512 + threadIdx.x] = dist * dist;
 }
 
+float calc_min_dist(float *image, int i_width, int i_height, float *temp, int t_width) {
+
+  if (t_width == 4096) {
+
+    int threads_per_block = 512;
+    int blocks_per_grid = 65535;
+
+    int translation_height = i_height - t_width + 1;
+    int translation_width = i_width - t_width + 1;
+
+    float *gpu_image, *gpu_temp;
+    CUDA_SAFE_CALL(cudaMalloc(&gpu_image, i_width*i_height));
+    CUDA_SAFE_CALL(cudaMemcpy(gpu_image, image, i_width*i_height, cudaMemcpyHostToDevice));
+    CUDA_SAFE_CALL(cudaMalloc(&gpu_temp, t_width*t_width));
+    CUDA_SAFE_CALL(cudaMemcpy(gpu_temp, temp, t_width*t_width, cudaMemcpyHostToDevice));
+
+    float *gpu_result;
+    CUDA_SAFE_CALL(cudaMalloc(&gpu_result, translation_width*translation_height));
+
+    int num_operations = translation_width * translation_height * t_width * t_width;
+    int num_per_iter = threads_per_block * blocks_per_grid;.
+    int num_iter = num_operations / num_per_iter;
+    if (num_iter * num_per_iter < num_operations) {
+      num_iter ++;
+    }
+  
+  }
+
+
+}
+
 /* Returns the squared Euclidean distance between TEMPLATE and IMAGE. The size of IMAGE
  * is I_WIDTH * I_HEIGHT, while TEMPLATE is square with side length T_WIDTH. The template
  * image should be flipped, rotated, and translated across IMAGE.
  */
-float calc_min_dist(float *image, int i_width, int i_height, float *temp, int t_width) {
+float calc_min_dist_old(float *image, int i_width, int i_height, float *temp, int t_width) {
   // float* image and float* temp are pointers to GPU addressible memory
   // You MAY NOT copy this data back to CPU addressible memory and you MAY 
   // NOT perform any computation using values from image or temp on the CPU.
