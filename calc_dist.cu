@@ -27,14 +27,18 @@ void rotate_ccw_90(float *arr, int width) {
 
 }
 
-__global__ void reductionKernel(float* A, int len, int level);
+__global__ void reductionKernel(float* result, int len, int level) {
+  int arrayIndex = 2*level*(blockIdx.y*4096 + blockIdx.x*512 + threadIdx.x);
+  if (arrayIndex + level < len) {
+    result[arrayIndex] += result[arrayIndex + level];
+  }
+}
 
 __global__ void leastDistanceKernel (float* A, float* B, float* C, int len);
 
-__global__ void leastDistance4096Kernel(float *image, float *temp, float *result, int i, int j) {
-  float dist = temp[blockIdx.y*4096 + blockIdx.x*512 + threadIdx.x] - image[]
-  result[blockIdx.y*4096 + blockIdx.x*512 + threadIdx.x] =
-    () * ()
+__global__ void leastDistance4096Kernel(float *image, float *temp, float *result, int translation_width, int i, int j) {
+  float dist = temp[blockIdx.y*4096 + blockIdx.x*512 + threadIdx.x] - image[blockIdx.y*4096 + blockIdx.x*512 + threadIdx.x + i*translation_width + j];
+  result[blockIdx.x*512 + threadIdx.x] = dist * dist;
 }
 
 /* Returns the squared Euclidean distance between TEMPLATE and IMAGE. The size of IMAGE
@@ -94,6 +98,7 @@ float calc_min_dist(float *image, int i_width, int i_height, float *temp, int t_
     float* gpu_result;
     CUDA_SAFE_CALL(cudaMalloc(gpu_result, arraySize));
     blocks_per_comparison = 32768;
+    float least_distance = UINT_MAX;
     for (int i = 0; i < translation_height; i++) {
       for (int j = 0; j < translation_width; j++) {
         dim3 dim_threads_per_block(threads_per_block, 1, 1);
@@ -101,8 +106,23 @@ float calc_min_dist(float *image, int i_width, int i_height, float *temp, int t_
         leastDistance4096Kernel<<<dim_blocks_per_grid, dim_threads_per_block>>>(gpu_image, gpu_temp, gpu_result, translation_width, i, j);
         cudaThreadSynchronize();
         CUT_CHECK_ERROR("");
+
+        int level = 1;
+        while (level != (8*4096)) {
+          blocks_per_grid = 8*4096;
+          dim3 dim_blocks_per_grid(blocks_per_grid, 1);
+          reductionKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>(gpu_result, 4096*4096, level);
+          cudaThreadSynchronize();
+          CUT_CHECK_ERROR("");
+          level *= 2;
+          blocks_per_grid /= 2;
+          if (blocks_per_grid == 0) {
+            blocks_per_grid = 1;
+        }
+        CUDA_SAFE_CALL(cudaMemcpy(&gpu_result, ))
       }
     }
+
 
   }
 
