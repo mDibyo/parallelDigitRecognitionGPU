@@ -59,7 +59,10 @@ __global__ void distance4096Kernel(float* gpu_image, float* gpu_temp, float* gpu
   gpu_result[thread_index % num_translations] += distance * distance;
 }
 
-__global__ void reductionKernel();
+__global__ void reductionKernel(float* gpu_result, int num_iterations, int level, int offset) {
+  int thread_index = offset + blockIdx.x * blockDim.x + threadIdx.x;
+
+}
 
 float calc_min_dist(float *image, int i_width, int i_height, float *temp, int t_width) {
 
@@ -91,7 +94,7 @@ float calc_min_dist(float *image, int i_width, int i_height, float *temp, int t_
     float *gpu_result;
     CUDA_SAFE_CALL(cudaMalloc(&gpu_result, num_translations*sizeof(float)));
     CUDA_SAFE_CALL(cudaMemcpy(gpu_result, result, num_translations*sizeof(float),
-                   cudaMemcpyHostToDevice));
+                              cudaMemcpyHostToDevice));
 
     dim3 dim_threads_per_block(threads_per_block, 1, 1);
     dim3 dim_blocks_per_grid(blocks_per_grid, 1);
@@ -107,13 +110,35 @@ float calc_min_dist(float *image, int i_width, int i_height, float *temp, int t_
       distance4096Kernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
         (gpu_image, gpu_temp, gpu_result, num_translations,
          num_operations - counter*num_per_iter, t_width, i_width);
-      cudaThreadSynchronize;
+      cudaThreadSynchronize();
       CUT_CHECK_ERROR("");
     }
 
-    // int num_translations = translation_height * translation_width;
-    // int level = 1;
-    // while (level != )
+    int num_blocks = 1;
+    if (num_translations <= (threads_per_block * blocks_per_grid)) {
+      if (num_translations <= threads_per_block) {
+        dim3 dim_threads_per_block(num_translations, 1, 1);
+        dim3 dim_blocks_per_grid(1, 1);
+      } else {
+        num_blocks = num_translations / threads_per_block + 1;
+        dim3 dim_blocks_per_grid(num_blocks, 1);
+      }
+      int level = 1;
+      while (level < num_translations) {
+        reductionKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
+          (gpu_result, num_translations, level, 0);
+        cudaThreadSynchronize();
+        CUT_CHECK_ERROR("");
+        level *= 2;
+        num_blocks /= 2;
+        if (num_blocks == 0) {
+          num_blocks = 1;
+        }
+
+      }
+    } else {
+
+    }
 
   }
 
