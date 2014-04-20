@@ -50,12 +50,12 @@ __global__ void leastDistance4096Kernel_old(float *image, float *temp, float *re
 
 
 
-__global__ void distance4096Kernel(float* gpu_image, float* gpu_temp, float* gpu_result, int num_iterations,
+__global__ void distance4096Kernel(float* gpu_image, float* gpu_temp, float* gpu_result, int num_translations,
                                    int offset, int t_width, int i_width) {
   int thread_index = offset + blockIdx.x * blockDim.x + threadIdx.x;
   int pixel_index = thread_index / num_translations;
   int distance = gpu_temp[pixel_index]
-               - gpu_image[thread_index % num_translations + (pixel_index / t_width) * i_width + pixel_index % t_width]
+               - gpu_image[thread_index % num_translations + (pixel_index / t_width) * i_width + pixel_index % t_width];
   gpu_result[thread_index % num_translations] += distance * distance;
 }
 
@@ -70,6 +70,8 @@ __global__ void reductionKernel(float* gpu_result, int num_iterations, int level
 
 float calc_min_dist(float *image, int i_width, int i_height, float *temp, int t_width) {
 
+  float least_distance = UINT_MAX;
+  
   if (t_width == 4096) {
 
     int threads_per_block = 512;
@@ -78,7 +80,6 @@ float calc_min_dist(float *image, int i_width, int i_height, float *temp, int t_
     int translation_height = i_height - t_width + 1;
     int translation_width = i_width - t_width + 1;
     int num_translations = translation_height * translation_width;
-    float least_distance = UINT_MAX;
     float new_distance;
 
     float *gpu_image, *gpu_temp;
@@ -106,7 +107,7 @@ float calc_min_dist(float *image, int i_width, int i_height, float *temp, int t_
     dim3 dim_blocks_per_grid(blocks_per_grid, 1);
 
     int num_operations = num_translations * t_width * t_width;
-    int num_per_iter = threads_per_block * blocks_per_grid;.
+    int num_per_iter = threads_per_block * blocks_per_grid;
     int num_iter = num_operations / num_per_iter;
     if (num_iter * num_per_iter < num_operations) {
       num_iter ++;
@@ -158,13 +159,14 @@ float calc_min_dist(float *image, int i_width, int i_height, float *temp, int t_
 
   }
 
+  return least_distance;
 
 }
 
 /* Returns the squared Euclidean distance between TEMPLATE and IMAGE. The size of IMAGE
  * is I_WIDTH * I_HEIGHT, while TEMPLATE is square with side length T_WIDTH. The template
  * image should be flipped, rotated, and translated across IMAGE.
- */
+ */ /*
 float calc_min_dist_old(float *image, int i_width, int i_height, float *temp, int t_width) {
   // float* image and float* temp are pointers to GPU addressible memory
   // You MAY NOT copy this data back to CPU addressible memory and you MAY 
@@ -264,3 +266,4 @@ float calc_min_dist_old(float *image, int i_width, int i_height, float *temp, in
 }
 
 
+*/
