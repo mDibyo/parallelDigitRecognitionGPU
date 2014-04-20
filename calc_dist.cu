@@ -53,10 +53,12 @@ __global__ void leastDistance4096Kernel_old(float *image, float *temp, float *re
 __global__ void distance4096Kernel(float* gpu_image, float* gpu_temp, float* gpu_result, int num_translations,
                                    int offset, int t_width, int i_width) {
   int thread_index = offset + blockIdx.x * blockDim.x + threadIdx.x;
-  int pixel_index = thread_index / num_translations;
-  int distance = gpu_temp[pixel_index]
-               - gpu_image[thread_index % num_translations + (pixel_index / t_width) * i_width + pixel_index % t_width];
-  gpu_result[thread_index % num_translations] += distance * distance;
+  if (thread_index < (num_translations * t_width * t_width)) {
+    int pixel_index = thread_index / num_translations;
+    int distance = gpu_temp[pixel_index]
+                 - gpu_image[thread_index % num_translations + (pixel_index / t_width) * i_width + pixel_index % t_width];
+    gpu_result[thread_index % num_translations] += distance * distance;  
+  }  
 }
 
 __global__ void reductionKernel(float* gpu_result, int num_iterations, int level, int offset) {
@@ -68,7 +70,17 @@ __global__ void reductionKernel(float* gpu_result, int num_iterations, int level
   }
 }
 
-float calc_min_dist(float *image, int i_width, int i_height, float *temp, int t_width) {
+__global__ void distanceSerialKernel(float* gpu_image, float* gpu_temp, float* gpu_result, int num_translations,
+                                     int i_width, int t_width, int translation_width, int translations_per_block) {
+  int trans_num = threadIdx.x;
+  int pixel_num = threadIdx.y + translations_per_block * blockIdx.x;
+  if (pixel_num < (num_translations)) {
+    float distance = gpu_temp[pixel_num] - gpu_image[((int) (trans_num / translation_width)) * i_width + ((int) (pixel_num / t_width)) * i_width + trans_num % translation_width + pixel_num % t_width];
+    gpu_result[trans_num] += distance * distance;  
+  }  
+}
+
+float calc_min_dist(float *gpu_image, int i_width, int i_height, float *gpu_temp, int t_width) {
 
   float least_distance = UINT_MAX;
   
@@ -82,15 +94,7 @@ float calc_min_dist(float *image, int i_width, int i_height, float *temp, int t_
     int num_translations = translation_height * translation_width;
     float new_distance;
 
-    float *gpu_image, *gpu_temp;
-    CUDA_SAFE_CALL(cudaMalloc(&gpu_image, i_width*i_height*sizeof(float)));
-    CUDA_SAFE_CALL(cudaMemcpy(gpu_image, image, i_width*i_height*sizeof(float),
-                              cudaMemcpyHostToDevice));
-    CUDA_SAFE_CALL(cudaMalloc(&gpu_temp, t_width*t_width*sizeof(float)));
-    CUDA_SAFE_CALL(cudaMemcpy(gpu_temp, temp, t_width*t_width*sizeof(float),
-                              cudaMemcpyHostToDevice));
-
-    float* result = (float *)malloc(num_translations);
+    float* result = (float *)malloc(num_translations*sizeof(float));
     if (result == NULL) {
       printf("Unable to allocate space for result");
       exit(EXIT_FAILURE);
@@ -99,10 +103,13 @@ float calc_min_dist(float *image, int i_width, int i_height, float *temp, int t_
       result[counter] = 0.0;
     }
     float *gpu_result;
-    CUDA_SAFE_CALL(cudaMalloc(&gpu_result, num_translations*sizeof(float)));
+    size_t arraySize = num_translations*sizeof(float);
+    CUDA_SAFE_CALL(cudaMalloc(&gpu_result, arraySize));
     CUDA_SAFE_CALL(cudaMemcpy(gpu_result, result, num_translations*sizeof(float),
                               cudaMemcpyHostToDevice));
 
+    printf("%d\n", 3); /*
+    ///////////////////
     dim3 dim_threads_per_block(threads_per_block, 1, 1);
     dim3 dim_blocks_per_grid(blocks_per_grid, 1);
 
@@ -113,14 +120,58 @@ float calc_min_dist(float *image, int i_width, int i_height, float *temp, int t_
       num_iter ++;
     }
 
-    for (int counter = 0; counter < num_iter; counter ++) {
+    printf("%d\n", 4);
+
+    for (int counter = 0; counter < num_iter; counter ++) { /*
       distance4096Kernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
         (gpu_image, gpu_temp, gpu_result, num_translations,
-         num_operations - counter*num_per_iter, t_width, i_width);
+         num_operations - counter*num_per_iter, t_width, i_width); 
+      distance4096Kernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
+        (gpu_image, gpu_temp, gpu_result, num_translations,
+         0, t_width, i_width);
       cudaThreadSynchronize();
       CUT_CHECK_ERROR("");
     }
+    //////////////////*/
+    int num_operations = num_translations * t_width * t_width;
+    int num_per_iter = threads_per_block * blocks_per_grid;
 
+    if (num_translations < threads_per_block) {
+      int translations_per_block = threads_per_block / num_translations;
+      dim3 dim_threads_per_block(num_translations, translations_per_block, 1);
+      int num_blocks = num_translations / translations_per_block + 1;
+      while (num_blocks > 0) {
+        if (num_blocks > blocks_per_grid) {
+          dim3 dim_threads_per_block(blocks_per_grid, 1);
+        } else {
+          dim3 dim_threads_per_block(num_blocks, 1);
+        }
+        distanceSerialKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
+          (gpu_image, gpu_temp, gpu_result, num_translations, i_width, t_width,
+           translation_width, translations_per_block);
+        cudaThreadSynchronize();
+        CUT_CHECK_ERROR("");
+        num_blocks -= blocks_per_grid;
+      }
+    } else {
+      // int 
+      dim3 dim_threads_per_block(threads_per_block, 1, 1);
+      dim3 dim_blocks_per_grid(num_translations / threads_per_block, 1);
+
+    }
+
+
+
+
+
+    ///////////////////
+    printf("%d\n", 5);
+    CUDA_SAFE_CALL(cudaMemcpy(result, gpu_result, num_translations*sizeof(float),
+                              cudaMemcpyDeviceToHost));
+    for (int i = 0; i < num_translations; i++) {
+      printf("%f\n", result[i]);
+    }
+ 
     int level = 1;
     int num_blocks = 1;
     if (num_translations <= (threads_per_block * blocks_per_grid)) {
@@ -131,7 +182,7 @@ float calc_min_dist(float *image, int i_width, int i_height, float *temp, int t_
       }
       dim3 dim_blocks_per_grid(num_blocks, 1);
       while (level < num_translations) {
-        reductionKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
+        distanceSerialKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
           (gpu_result, num_translations, level, 0);
         cudaThreadSynchronize();
         CUT_CHECK_ERROR("");
@@ -145,14 +196,18 @@ float calc_min_dist(float *image, int i_width, int i_height, float *temp, int t_
       printf("Input is too large!");
     }
 
+    printf("%d\n", 6);
+   
     CUDA_SAFE_CALL(cudaMemcpy(&new_distance, gpu_result, sizeof(float),
                               cudaMemcpyDeviceToHost));
     if (new_distance < least_distance) {
       least_distance = new_distance;
     }
 
-    CUDA_SAFE_CALL(cudaFree(gpu_image));
-    CUDA_SAFE_CALL(cudaFree(gpu_temp));
+    printf("%d\n", 7);
+   
+    // CUDA_SAFE_CALL(cudaFree(gpu_image));
+    // CUDA_SAFE_CALL(cudaFree(gpu_temp));
     CUDA_SAFE_CALL(cudaFree(gpu_result));
 
     free(result);
