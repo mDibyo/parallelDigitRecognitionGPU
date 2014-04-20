@@ -60,8 +60,12 @@ __global__ void distance4096Kernel(float* gpu_image, float* gpu_temp, float* gpu
 }
 
 __global__ void reductionKernel(float* gpu_result, int num_iterations, int level, int offset) {
-  int thread_index = offset + blockIdx.x * blockDim.x + threadIdx.x;
-
+  int thread_index = offset + 2 * level * (blockIdx.x * blockDim.x + threadIdx.x);
+  if (thread_index + level < num_iterations) {
+    if (gpu_result[thread_index + level] < gpu_result[thread_index]) {
+      gpu_result[thread_index] = gpu_result[thread_index + level];
+    }
+  }
 }
 
 float calc_min_dist(float *image, int i_width, int i_height, float *temp, int t_width) {
@@ -114,16 +118,15 @@ float calc_min_dist(float *image, int i_width, int i_height, float *temp, int t_
       CUT_CHECK_ERROR("");
     }
 
+    int level = 1;
     int num_blocks = 1;
     if (num_translations <= (threads_per_block * blocks_per_grid)) {
       if (num_translations <= threads_per_block) {
         dim3 dim_threads_per_block(num_translations, 1, 1);
-        dim3 dim_blocks_per_grid(1, 1);
       } else {
         num_blocks = num_translations / threads_per_block + 1;
-        dim3 dim_blocks_per_grid(num_blocks, 1);
       }
-      int level = 1;
+      dim3 dim_blocks_per_grid(num_blocks, 1);
       while (level < num_translations) {
         reductionKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
           (gpu_result, num_translations, level, 0);
