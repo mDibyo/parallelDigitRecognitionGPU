@@ -78,6 +78,8 @@ float calc_min_dist(float *image, int i_width, int i_height, float *temp, int t_
     int translation_height = i_height - t_width + 1;
     int translation_width = i_width - t_width + 1;
     int num_translations = translation_height * translation_width;
+    float least_distance = UINT_MAX;
+    float new_distance;
 
     float *gpu_image, *gpu_temp;
     CUDA_SAFE_CALL(cudaMalloc(&gpu_image, i_width*i_height*sizeof(float)));
@@ -87,7 +89,7 @@ float calc_min_dist(float *image, int i_width, int i_height, float *temp, int t_
     CUDA_SAFE_CALL(cudaMemcpy(gpu_temp, temp, t_width*t_width*sizeof(float),
                               cudaMemcpyHostToDevice));
 
-    float * result = (float *)malloc(num_translations);
+    float* result = (float *)malloc(num_translations);
     if (result == NULL) {
       printf("Unable to allocate space for result");
       exit(EXIT_FAILURE);
@@ -137,11 +139,22 @@ float calc_min_dist(float *image, int i_width, int i_height, float *temp, int t_
         if (num_blocks == 0) {
           num_blocks = 1;
         }
-
       }
     } else {
-
+      printf("Input is too large!");
     }
+
+    CUDA_SAFE_CALL(cudaMemcpy(&new_distance, gpu_result, sizeof(float),
+                              cudaMemcpyDeviceToHost));
+    if (new_distance < least_distance) {
+      least_distance = new_distance;
+    }
+
+    CUDA_SAFE_CALL(cudaFree(gpu_image));
+    CUDA_SAFE_CALL(cudaFree(gpu_temp));
+    CUDA_SAFE_CALL(cudaFree(gpu_result));
+
+    free(result);
 
   }
 
