@@ -70,12 +70,15 @@ __global__ void reductionKernel(float* gpu_result, int num_iterations, int level
   }
 }
 
-__global__ void distanceSerialKernel(float* gpu_image, float* gpu_temp, float* gpu_result, int num_translations,
+__global__ void distanceSerialKernel(float* gpu_image, float* gpu_temp, float* gpu_result, float* gpu_test, int num_translations,
                                      int i_width, int t_width, int translation_width, int translations_per_block) {
   int trans_num = threadIdx.x;
   int pixel_num = threadIdx.y + translations_per_block * blockIdx.x;
   if (pixel_num < (num_translations)) {
     float distance = gpu_temp[pixel_num] - gpu_image[((int) (trans_num / translation_width)) * i_width + ((int) (pixel_num / t_width)) * i_width + trans_num % translation_width + pixel_num % t_width];
+    if (pixel_num == 0 && trans_num < 100) {
+      gpu_test[trans_num] = distance;
+    }
     gpu_result[trans_num] += distance * distance;  
   }  
 }
@@ -102,11 +105,16 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height, float *gpu_temp
     for (int counter = 0; counter < num_translations; counter++) {
       result[counter] = 0.0;
     }
-    float *gpu_result;
+    float* gpu_result;
     size_t arraySize = num_translations*sizeof(float);
     CUDA_SAFE_CALL(cudaMalloc(&gpu_result, arraySize));
     CUDA_SAFE_CALL(cudaMemcpy(gpu_result, result, num_translations*sizeof(float),
                               cudaMemcpyHostToDevice));
+
+    float* test = (float *)malloc(100*sizeof(float));
+    float* gpu_test;
+    size_t test_size = 100*sizeof(float);
+    CUDA_SAFE_CALL(cudaMalloc(&gpu_test, test_size));
 
     printf("%d\n", 3); /*
     ///////////////////
@@ -120,7 +128,6 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height, float *gpu_temp
       num_iter ++;
     }
 
-    printf("%d\n", 4);
 
     for (int counter = 0; counter < num_iter; counter ++) { /*
       distance4096Kernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
@@ -133,38 +140,50 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height, float *gpu_temp
       CUT_CHECK_ERROR("");
     }
     //////////////////*/
-    int num_operations = num_translations * t_width * t_width;
-    int num_per_iter = threads_per_block * blocks_per_grid;
+    // int num_operations = num_translations * t_width * t_width;
+    // int num_per_iter = threads_per_block * blocks_per_grid;
 
     if (num_translations < threads_per_block) {
       int translations_per_block = threads_per_block / num_translations;
-      dim3 dim_threads_per_block(num_translations, translations_per_block, 1);
       int num_blocks = num_translations / translations_per_block + 1;
       while (num_blocks > 0) {
         if (num_blocks > blocks_per_grid) {
-          dim3 dim_threads_per_block(blocks_per_grid, 1);
+          dim3 dim_threads_per_block(num_translations, translations_per_block, 1);
+          dim3 dim_blocks_per_grid(blocks_per_grid, 1);
+          distanceSerialKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
+            (gpu_image, gpu_temp, gpu_result, gpu_test, num_translations, i_width, t_width,
+             translation_width, translations_per_block);
+          cudaThreadSynchronize();
+          CUT_CHECK_ERROR("");
         } else {
-          dim3 dim_threads_per_block(num_blocks, 1);
+          dim3 dim_threads_per_block(num_translations, translations_per_block, 1);
+          dim3 dim_blocks_per_grid(num_blocks, 1);
+          distanceSerialKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
+            (gpu_image, gpu_temp, gpu_result, gpu_test, num_translations, i_width, t_width,
+             translation_width, translations_per_block);
+          cudaThreadSynchronize();
+          CUT_CHECK_ERROR("");
         }
-        distanceSerialKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
-          (gpu_image, gpu_temp, gpu_result, num_translations, i_width, t_width,
-           translation_width, translations_per_block);
-        cudaThreadSynchronize();
-        CUT_CHECK_ERROR("");
         num_blocks -= blocks_per_grid;
+
       }
     } else {
       // int 
-      dim3 dim_threads_per_block(threads_per_block, 1, 1);
-      dim3 dim_blocks_per_grid(num_translations / threads_per_block, 1);
+      // dim3 dim_threads_per_block(threads_per_block, 1, 1);
+      // dim3 dim_blocks_per_grid(num_translations / threads_per_block, 1);
+      printf("Reached else case of num_translations! \n");
+    }
 
+    ///////////////////
+    printf("%d\n", 4);
+
+    CUDA_SAFE_CALL(cudaMemcpy(test, gpu_test, test_size,
+                              cudaMemcpyDeviceToHost));
+    for (int i = 0; i < 100; i++) {
+      printf("%f\n", test[i]);
     }
 
 
-
-
-
-    ///////////////////
     printf("%d\n", 5);
     CUDA_SAFE_CALL(cudaMemcpy(result, gpu_result, num_translations*sizeof(float),
                               cudaMemcpyDeviceToHost));
@@ -177,21 +196,35 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height, float *gpu_temp
     if (num_translations <= (threads_per_block * blocks_per_grid)) {
       if (num_translations <= threads_per_block) {
         dim3 dim_threads_per_block(num_translations, 1, 1);
+        dim3 dim_blocks_per_grid(num_blocks, 1);
+        while (level < num_translations) {
+          reductionKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
+            (gpu_result, num_translations, level, 0);
+          cudaThreadSynchronize();
+          CUT_CHECK_ERROR("");
+          level *= 2;
+          num_blocks /= 2;
+          if (num_blocks == 0) {
+            num_blocks = 1;
+          }
+        }
       } else {
         num_blocks = num_translations / threads_per_block + 1;
-      }
-      dim3 dim_blocks_per_grid(num_blocks, 1);
-      while (level < num_translations) {
-        distanceSerialKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
-          (gpu_result, num_translations, level, 0);
-        cudaThreadSynchronize();
-        CUT_CHECK_ERROR("");
-        level *= 2;
-        num_blocks /= 2;
-        if (num_blocks == 0) {
-          num_blocks = 1;
+        dim3 dim_threads_per_block(threads_per_block, 1, 1);
+        dim3 dim_blocks_per_grid(num_blocks, 1);
+        while (level < num_translations) {
+          reductionKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
+            (gpu_result, num_translations, level, 0);
+          cudaThreadSynchronize();
+          CUT_CHECK_ERROR("");
+          level *= 2;
+          num_blocks /= 2;
+          if (num_blocks == 0) {
+            num_blocks = 1;
+          }
         }
       }
+      
     } else {
       printf("Input is too large!");
     }
@@ -209,11 +242,13 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height, float *gpu_temp
     // CUDA_SAFE_CALL(cudaFree(gpu_image));
     // CUDA_SAFE_CALL(cudaFree(gpu_temp));
     CUDA_SAFE_CALL(cudaFree(gpu_result));
+    CUDA_SAFE_CALL(cudaFree(gpu_test));
 
     free(result);
 
   }
 
+  printf("%f\n", least_distance);
   return least_distance;
 
 }
