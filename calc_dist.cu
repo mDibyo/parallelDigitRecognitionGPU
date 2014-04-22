@@ -22,16 +22,16 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 
 	if (t_width == 4096) {
 
-		int threads_per_block = 512;
-		int blocks_per_grid = 65564;
+
 
 		int trans_height = i_height - t_width + 1;
 		int trans_width = i_width - t_width + 1;
 		int num_translations = trans_width * trans_height;
+		int temp_size = t_width * t_width;
 
 		float new_distance;
 
-		size_t result_size = t_width*t_width*sizeof(float);
+		size_t result_size = temp_size*sizeof(float);
 		float* result = (float *)malloc(result_size);
 		if (result == NULL) {
 			printf("Unable to allocate space for result!\n");
@@ -49,6 +49,9 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 		float* gpu_test;
 		CUDA_SAFE_CALL(cudaMalloc(&gpu_result, test_size));
 
+		int threads_per_block = 512;
+		int blocks_per_grid = 65564;
+
 		// [16, 4096]
 		dim3 dim_threads_per_block(threads_per_block, 1, 1);
 		dim3 dim_blocks_per_grid(8, 4096);
@@ -56,6 +59,24 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 			for (int off_y = 0; off_y < trans_width; off_y++) {
 				distance4096Kernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
 					(gpu_image, gpu_temp, off_x , off_y, i_width);
+				cudaThreadSynchronize();
+				CUT_CHECK_ERROR("");
+
+				int level = 1;
+				blocks_per_grid = 8 * 4096;
+				while (level != temp_size) {
+					dim3 dim_threads_per_block(threads_per_block, 1, 1);
+					dim3 dim_blocks_per_grid(blocks_per_grid, 1);
+					reduction4096Kernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
+						(gpu_result, level);
+					cudaThreadSynchronize();
+					CUT_CHECK_ERROR("");
+					level *= 2;
+					blocks_per_grid /= 2;
+					if (blocks_per_grid == 0) {
+						blocks_per_grid = 1;
+					}
+				}
 			}
 		}
 
