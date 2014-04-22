@@ -5,7 +5,8 @@
 #include <cutil.h>
 #include "utils.h"
 
-float calc_min_dist(float *gpu_image, int i_width, int i_height, float* gpu_temp, int t_width) {
+float calc_min_dist(float *gpu_image, int i_width, int i_height,
+										float* gpu_temp, int t_width) {
 
 	float least_distance = UINT_MAX;
 
@@ -38,6 +39,15 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height, float* gpu_temp
 		float* gpu_test;
 		CUDA_SAFE_CALL(cudaMalloc(&gpu_result, test_size));
 
+		// [16, 4096]
+		dim3 dim_threads_per_block(threads_per_block, 1, 1);
+		dim3 dim_blocks_per_grid(8, 4096);
+		for (int i = 0; i < trans_height; i++) {
+			for (int j = 0; j < trans_width; j++) {
+				distance4096Kernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
+					(gpu_image, gpu_temp, i , j, i_width);
+			}
+		}
 
 		CUDA_SAFE_CALL(cudaFree(gpu_result));
 		CUDA_SAFE_CALL(cudaFree(gpu_test));
@@ -48,5 +58,5 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height, float* gpu_temp
 	}
 
 	return least_distance;
-	
+
 }
