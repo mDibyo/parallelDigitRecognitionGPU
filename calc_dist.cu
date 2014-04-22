@@ -5,7 +5,7 @@
 #include <cutil.h>
 #include "utils.h"
 
-__global__ distance4096Kernel(float* gpuImage, float* gpuTemp, float* gpuResult
+__global__ void distance4096Kernel(float* gpuImage, float* gpuTemp, float* gpuResult,
 															int offX, int offY, int iWidth) {
 	if (blockIdx.y < 4096) {
 		float distance
@@ -15,7 +15,7 @@ __global__ distance4096Kernel(float* gpuImage, float* gpuTemp, float* gpuResult
 	}
 }
 
-__global__ reduction4096Kernel(float* gpuResult, int tempSize, int level) {
+__global__ void reduction4096Kernel(float* gpuResult, int tempSize, int level) {
 	int resultIndex = 2*level*(blockIdx.x*512 + threadIdx.x);\
 	if (resultIndex + level < tempSize) {
 		gpuResult[resultIndex] += gpuResult[resultIndex + level];
@@ -31,7 +31,7 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 
 		int trans_height = i_height - t_width + 1;
 		int trans_width = i_width - t_width + 1;
-		int num_translations = trans_width * trans_height;
+		// int num_translations = trans_width * trans_height;
 		int temp_size = t_width * t_width;
 
 		float new_distance;
@@ -52,7 +52,7 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 			exit(EXIT_FAILURE);
 		}
 		float* gpu_test;
-		CUDA_SAFE_CALL(cudaMalloc(&gpu_result, test_size));
+		CUDA_SAFE_CALL(cudaMalloc(&gpu_test, 100*sizeof(float)));
 
 		int threads_per_block = 512;
 		int blocks_per_grid = 65564;
