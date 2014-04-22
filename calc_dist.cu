@@ -5,13 +5,20 @@
 #include <cutil.h>
 #include "utils.h"
 
-__global__ distance4096Kernel(float* gpuImage, float* gpuTemp,
+__global__ distance4096Kernel(float* gpuImage, float* gpuTemp, float* gpuResult
 															int offX, int offY, int iWidth) {
 	if (blockIdx.y < 4096) {
 		float distance
 			= gpuTemp[4096*blockIdx.y + 512*blockIdx.x + threadIdx.x]
 			- gpuImage[(iWidth+blockIdx.y)*offX + offY + 512*blockIdx.x + threadIdx.x];
-		result[4096*blockIdx.y + 512*blockIdx.x + threadIdx.x] = distance * distance;
+		gpuResult[4096*blockIdx.y + 512*blockIdx.x + threadIdx.x] = distance * distance;
+	}
+}
+
+__global__ reduction4096Kernel(float* gpuResult, int tempSize, int level) {
+	int resultIndex = 2*level*(blockIdx.x*512 + threadIdx.x);\
+	if (resultIndex + level < tempSize) {
+		gpuResult[resultIndex] += gpuResult[resultIndex + level];
 	}
 }
 
@@ -58,7 +65,7 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 		for (int off_x = 0; off_x < trans_height; off_x++) {
 			for (int off_y = 0; off_y < trans_width; off_y++) {
 				distance4096Kernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
-					(gpu_image, gpu_temp, off_x , off_y, i_width);
+					(gpu_image, gpu_temp, gpu_result, off_x , off_y, i_width);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 
@@ -68,7 +75,7 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 					dim3 dim_threads_per_block(threads_per_block, 1, 1);
 					dim3 dim_blocks_per_grid(blocks_per_grid, 1);
 					reduction4096Kernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
-						(gpu_result, level);
+						(gpu_result, temp_size, level);
 					cudaThreadSynchronize();
 					CUT_CHECK_ERROR("");
 					level *= 2;
