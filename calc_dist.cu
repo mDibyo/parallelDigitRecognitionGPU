@@ -29,8 +29,6 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 
 	if (t_width == 4096) {
 
-
-
 		int trans_height = i_height - t_width + 1;
 		int trans_width = i_width - t_width + 1;
 		int num_translations = trans_width * trans_height;
@@ -84,6 +82,13 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 						blocks_per_grid = 1;
 					}
 				}
+
+				CUDA_SAFE_CALL(cudaMemcpy(&new_distance, gpu_result, sizeof(float),
+																	cudaMemcpyDeviceToHost));
+				if (new_distance < least_distance) {
+					least_distance = new_distance;
+				}
+
 			}
 		}
 
