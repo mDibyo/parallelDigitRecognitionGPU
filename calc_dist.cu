@@ -8,17 +8,21 @@
 __global__ void distance2048NormalKernel(float* gpuImage, float* gpuTemp, float* gpuResults,
 																				 int offX, int offY, int iWidth) {
 	int blockIndexX = blockIdx.x / 4;
-	offy += blockIdx.x % 4;
+	offY += blockIdx.x % 4;
 	if (offY + 512*blockIdx.x + threadIdx.x < iWidth) {
 		float distance
 			= gpuTemp[2048*blockIdx.y + 512*blockIndexX + threadIdx.x]
 			- gpuImage[(offX+blockIdx.y)*iWidth + offY + 512*blockIndexX + threadIdx.x];
-		gpuResult[4194304*(blockIdx.x%4) + 2048*blockIdx.y + 512*blockIndexX + threadIdx.x]
+		gpuResults[4194304*(blockIdx.x%4) + 2048*blockIdx.y + 512*blockIndexX + threadIdx.x]
 			= distance * distance;
 	}
 	
 }
 
+__global__ void reduction2048SumKernel(float* gpuResults, unsigned int tempSize, unsigned int level) {
+	int a = 0;
+
+}
 
 __global__ void distance4096NormalKernel(float* gpuImage, float* gpuTemp, float* gpuResult, float* gpuTest,
 																				 int offX, int offY, int iWidth) {
@@ -88,10 +92,16 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 					}
 				}
 
-			}
+				CUDA_SAFE_CALL(cudaMemcpy(&new_distance, gpu_results, sizeof(float),
+																	cudaMemcpyDeviceToHost));
+				if (new_distance < least_distance) {
+					least_distance = new_distance;
+				}
 
+			}
 		}
 
+		CUDA_SAFE_CALL(cudaFree(gpu_results));
 
 	}	else if (t_width == 4096) {
 
