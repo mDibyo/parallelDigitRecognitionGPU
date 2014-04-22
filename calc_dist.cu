@@ -5,6 +5,21 @@
 #include <cutil.h>
 #include "utils.h"
 
+__global__ void distance2048NormalKernel(float* gpuImage, float* gpuTemp, float* gpuResults,
+																				 int offX, int offY, int iWidth) {
+	int blockIndexX = blockIdx.x / 4;
+	offy += blockIdx.x % 4;
+	if (offY + 512*blockIdx.x + threadIdx.x < iWidth) {
+		float distance
+			= gpuTemp[2048*blockIdx.y + 512*blockIndexX + threadIdx.x]
+			- gpuImage[(offX+blockIdx.y)*iWidth + offY + 512*blockIndexX + threadIdx.x];
+		gpuResult[4194304*(blockIdx.x%4) + 2048*blockIdx.y + 512*blockIndexX + threadIdx.x]
+			= distance * distance;
+	}
+	
+}
+
+
 __global__ void distance4096NormalKernel(float* gpuImage, float* gpuTemp, float* gpuResult, float* gpuTest,
 																				 int offX, int offY, int iWidth) {
 	float distance
@@ -48,7 +63,7 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 		int blocks_per_grid = 65535;
 
 		dim3 dim_threads_per_block(threads_per_block, 1, 1);
-		dim3 dim_blocks_per_grid(4, 8192);
+		dim3 dim_blocks_per_grid(16, 2048);
 
 		for (int off_x = 0; off_x < trans_height; off_x ++) {
 			for (int off_y = 0; off_y < trans_width; off_y += 4) {
