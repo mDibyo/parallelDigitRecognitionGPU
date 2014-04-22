@@ -5,6 +5,16 @@
 #include <cutil.h>
 #include "utils.h"
 
+__global__ distance4096Kernel(float* gpuImage, float* gpuTemp,
+															int offX, int offY, int iWidth) {
+	if (blockIdx.y < 4096) {
+		float distance
+			= gpuTemp[4096*blockIdx.y + 512*blockIdx.x + threadIdx.x]
+			- gpuImage[(iWidth+blockIdx.y)*offX + offY + 512*blockIdx.x + threadIdx.x];
+		result[4096*blockIdx.y + 512*blockIdx.x + threadIdx.x] = distance * distance;
+	}
+}
+
 float calc_min_dist(float *gpu_image, int i_width, int i_height,
 										float* gpu_temp, int t_width) {
 
@@ -21,7 +31,7 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 
 		float new_distance;
 
-		size_t result_size = num_translations*sizeof(float);
+		size_t result_size = t_width*t_width*sizeof(float);
 		float* result = (float *)malloc(result_size);
 		if (result == NULL) {
 			printf("Unable to allocate space for result!\n");
@@ -42,10 +52,10 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 		// [16, 4096]
 		dim3 dim_threads_per_block(threads_per_block, 1, 1);
 		dim3 dim_blocks_per_grid(8, 4096);
-		for (int i = 0; i < trans_height; i++) {
-			for (int j = 0; j < trans_width; j++) {
+		for (int off_x = 0; off_x < trans_height; off_x++) {
+			for (int off_y = 0; off_y < trans_width; off_y++) {
 				distance4096Kernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
-					(gpu_image, gpu_temp, i , j, i_width);
+					(gpu_image, gpu_temp, off_x , off_y, i_width);
 			}
 		}
 
