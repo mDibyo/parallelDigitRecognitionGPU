@@ -5,19 +5,22 @@
 #include <cutil.h>
 #include "utils.h"
 
-__global__ void distance4096Kernel(float* gpuImage, float* gpuTemp, float* gpuResult,
+__global__ void distance4096Kernel(float* gpuImage, float* gpuTemp, float* gpuResult, float* gpuTest,
 															int offX, int offY, int iWidth) {
 	if (blockIdx.y < 4096) {
 		float distance
 			= gpuTemp[4096*blockIdx.y + 512*blockIdx.x + threadIdx.x]
-			- gpuImage[(iWidth+blockIdx.y)*offX + offY + 512*blockIdx.x + threadIdx.x];
+			- gpuImage[(offX+blockIdx.y)*iWidth + offY + 512*blockIdx.x + threadIdx.x];
 		gpuResult[4096*blockIdx.y + 512*blockIdx.x + threadIdx.x] = distance * distance;
+		// if ((distance * distance) > 1) {
+			gpuTest[(4096*blockIdx.y + 512*blockIdx.x + threadIdx.x) % 100] = distance * distance;
+		// }
 	}
 }
 
-__global__ void reduction4096Kernel(float* gpuResult, int tempSize, int level) {
-	int resultIndex = 2*level*(blockIdx.x*512 + threadIdx.x);\
-	if (resultIndex + level < tempSize) {
+__global__ void reduction4096Kernel(float* gpuResult, unsigned int tempSize, unsigned int level) {
+	int resultIndex = 2*level*(blockIdx.x*blockDim.x + threadIdx.x);\
+	if ((resultIndex + level) < tempSize) {
 		gpuResult[resultIndex] += gpuResult[resultIndex + level];
 	}
 }
@@ -25,14 +28,14 @@ __global__ void reduction4096Kernel(float* gpuResult, int tempSize, int level) {
 float calc_min_dist(float *gpu_image, int i_width, int i_height,
 										float* gpu_temp, int t_width) {
 
-	float least_distance = UINT_MAX;
+	float least_distance = FLT_MAX;
 
 	if (t_width == 4096) {
 
 		int trans_height = i_height - t_width + 1;
 		int trans_width = i_width - t_width + 1;
 		// int num_translations = trans_width * trans_height;
-		int temp_size = t_width * t_width;
+		unsigned int temp_size = t_width * t_width;
 
 		float new_distance;
 
@@ -42,17 +45,27 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 			printf("Unable to allocate space for result!\n");
 			exit(EXIT_FAILURE);
 		}
+		for (int counter = 0; counter < temp_size; counter++) {
+			result[counter] = -1000;
+		}
 		float* gpu_result;
 		CUDA_SAFE_CALL(cudaMalloc(&gpu_result, result_size));
+		CUDA_SAFE_CALL(cudaMemcpy(gpu_result, result, result_size,
+															cudaMemcpyHostToDevice));
 
 		size_t test_size = 100*sizeof(float);
 		float* test = (float *)malloc(test_size);
 		if (result == NULL) {
-			printf("Unable to allocate space for result!\n");
+			printf("Unable to allocate space for test!\n");
 			exit(EXIT_FAILURE);
 		}
+		for (int counter = 0; counter < 100; counter++) {
+			test[counter] = -1000;
+		}
 		float* gpu_test;
-		CUDA_SAFE_CALL(cudaMalloc(&gpu_test, 100*sizeof(float)));
+		CUDA_SAFE_CALL(cudaMalloc(&gpu_test, test_size));
+		CUDA_SAFE_CALL(cudaMemcpy(gpu_test, test, test_size,
+															cudaMemcpyHostToDevice));
 
 		int threads_per_block = 512;
 		int blocks_per_grid = 65564;
@@ -63,13 +76,14 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 		for (int off_x = 0; off_x < trans_height; off_x++) {
 			for (int off_y = 0; off_y < trans_width; off_y++) {
 				distance4096Kernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
-					(gpu_image, gpu_temp, gpu_result, off_x , off_y, i_width);
+					(gpu_image, gpu_temp, gpu_result, gpu_test, off_x , off_y, i_width);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 
-				int level = 1;
+				unsigned int level = 1;
 				blocks_per_grid = 8 * 4096;
 				while (level != temp_size) {
+					// printf("%d level reduction with %d blocks\n", level, blocks_per_grid);
 					dim3 dim_threads_per_block(threads_per_block, 1, 1);
 					dim3 dim_blocks_per_grid(blocks_per_grid, 1);
 					reduction4096Kernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
@@ -92,8 +106,14 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 			}
 		}
 
+		CUDA_SAFE_CALL(cudaMemcpy(test, gpu_test, test_size,
+																	cudaMemcpyDeviceToHost));
 		CUDA_SAFE_CALL(cudaFree(gpu_result));
 		CUDA_SAFE_CALL(cudaFree(gpu_test));
+		/*
+		for (int counter = 0; counter < 100; counter++) {
+			printf("%f\n", test[counter]);
+		} */
 
 		free(result);
 		free(test);
