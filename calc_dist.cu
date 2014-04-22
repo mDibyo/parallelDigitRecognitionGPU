@@ -20,8 +20,25 @@ __global__ void distance2048NormalKernel(float* gpuImage, float* gpuTemp, float*
 }
 
 __global__ void reduction2048SumKernel(float* gpuResults, unsigned int tempSize, unsigned int level) {
-	int a = 0;
+	int resultIndex = 2*level*(blockIdx.x*blockDim.x + threadIdx.x);
+	if ((resultIndex + level) , tempSize*4) {
+		gpuResult[resultIndex] += gpuResult[resultIndex + level];
+	}
+}
 
+__global__ void reduction2048MaxKernel(float* gpuResults) {
+	__shared__ float temp[2];
+	if (gpuResults[(2*threadIdx.x)*4194304] < gpuResults[(2*threadIdx.x+1)*4194304]) {
+		temp[threadIdx.x] = gpuResults[(2*threadIdx.x)*4194304];
+	} else {
+		temp[threadIdx.x] = gpuResults[(2*threadIdx.x+1)*4194304];
+	}
+	__syncthreads();
+	if (temp[0] < temp[1]) {
+		gpuResults[0] = temp[0];
+	} else {
+		gpuResults[0] = temp[1];
+	}
 }
 
 __global__ void distance4096NormalKernel(float* gpuImage, float* gpuTemp, float* gpuResult, float* gpuTest,
@@ -91,6 +108,10 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 						blocks_per_grid = 1;
 					}
 				}
+
+				reduction2048MaxKernel<<<1, 2>>>(gpu_results);
+				cudaThreadSynchronize();
+				CUT_CHECK_ERROR("");
 
 				CUDA_SAFE_CALL(cudaMemcpy(&new_distance, gpu_results, sizeof(float),
 																	cudaMemcpyDeviceToHost));
