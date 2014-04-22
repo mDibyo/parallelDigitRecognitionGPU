@@ -21,8 +21,8 @@ __global__ void distance2048NormalKernel(float* gpuImage, float* gpuTemp, float*
 
 __global__ void reduction2048SumKernel(float* gpuResults, unsigned int tempSize, unsigned int level) {
 	int resultIndex = 2*level*(blockIdx.x*blockDim.x + threadIdx.x);
-	if ((resultIndex + level) , tempSize*4) {
-		gpuResult[resultIndex] += gpuResult[resultIndex + level];
+	if ((resultIndex + level) < tempSize*4) {
+		gpuResults[resultIndex] += gpuResults[resultIndex + level];
 	}
 }
 
