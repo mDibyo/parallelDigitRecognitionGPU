@@ -21,12 +21,8 @@ __global__ void distance4096ReversedKernel(float* gpuImage, float* gpuTemp, floa
 	gpuResult[4096*blockIdx.y + 512*blockIdx.x + threadIdx.x] = distance * distance;
 }
 
-
-
-
-
 __global__ void reduction4096Kernel(float* gpuResult, unsigned int tempSize, unsigned int level) {
-	int resultIndex = 2*level*(blockIdx.x*blockDim.x + threadIdx.x);\
+	int resultIndex = 2*level*(blockIdx.x*blockDim.x + threadIdx.x);
 	if ((resultIndex + level) < tempSize) {
 		gpuResult[resultIndex] += gpuResult[resultIndex + level];
 	}
@@ -60,6 +56,22 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 					(gpu_image, gpu_temp, gpu_results, off_x, off_y, i_width);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
+
+				unsigned int level = 1;
+				blocks_per_grid = 4 * 4 * 2048;
+				while (level < (temp_size/4)) {
+					dim3 dim_threads_per_block(threads_per_block, 1, 1);
+					dim3 dim_blocks_per_grid(blocks_per_grid, 1);
+					reduction2048SumKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
+						(gpu_results, temp_size, level);
+					cudaThreadSynchronize();
+					CUT_CHECK_ERROR("");
+					level *= 2;
+					blocks_per_grid /= 2;
+					if (blocks_per_grid == 0) {
+						blocks_per_grid = 1;
+					}
+				}
 
 			}
 
@@ -109,7 +121,7 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 
 				unsigned int level = 1;
 				blocks_per_grid = 8 * 4096;
-				while (level != temp_size) {
+				while (level < temp_size) {
 					// printf("%d level reduction with %d blocks\n", level, blocks_per_grid);
 					dim3 dim_threads_per_block(threads_per_block, 1, 1);
 					dim3 dim_blocks_per_grid(blocks_per_grid, 1);
