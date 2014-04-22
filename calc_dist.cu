@@ -21,6 +21,10 @@ __global__ void distance4096ReversedKernel(float* gpuImage, float* gpuTemp, floa
 	gpuResult[4096*blockIdx.y + 512*blockIdx.x + threadIdx.x] = distance * distance;
 }
 
+
+
+
+
 __global__ void reduction4096Kernel(float* gpuResult, unsigned int tempSize, unsigned int level) {
 	int resultIndex = 2*level*(blockIdx.x*blockDim.x + threadIdx.x);\
 	if ((resultIndex + level) < tempSize) {
@@ -32,24 +36,43 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 										float* gpu_temp, int t_width) {
 
 	float least_distance = FLT_MAX;
+	float new_distance = least_distance;
 
-	if (t_width == 4096) {
+	int trans_height = i_height - t_width + 1;
+	int trans_width = i_width - t_width + 1;
+	unsigned int temp_size = t_width * t_width;
 
-		int trans_height = i_height - t_width + 1;
-		int trans_width = i_width - t_width + 1;
-		// int num_translations = trans_width * trans_height;
-		unsigned int temp_size = t_width * t_width;
+	if (t_width == 2048) {
 
-		float new_distance;
+		size_t result_size = temp_size*sizeof(float);
+		float* gpu_results;
+		CUDA_SAFE_CALL(cudaMalloc(&gpu_results, result_size*4));
+
+		int threads_per_block = 512;
+		int blocks_per_grid = 65535;
+
+		dim3 dim_threads_per_block(threads_per_block, 1, 1);
+		dim3 dim_blocks_per_grid(4, 8192);
+
+		for (int off_x = 0; off_x < trans_height; off_x ++) {
+			for (int off_y = 0; off_y < trans_width; off_y += 4) {
+				distance2048NormalKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
+					(gpu_image, gpu_temp, gpu_results, off_x, off_y, i_width);
+				cudaThreadSynchronize();
+				CUT_CHECK_ERROR("");
+
+			}
+
+		}
+
+
+	}	else if (t_width == 4096) {
 
 		size_t result_size = temp_size*sizeof(float);
 		float* result = (float *)malloc(result_size);
 		if (result == NULL) {
 			printf("Unable to allocate space for result!\n");
 			exit(EXIT_FAILURE);
-		}
-		for (int counter = 0; counter < temp_size; counter++) {
-			result[counter] = -1000;
 		}
 		float* gpu_result;
 		CUDA_SAFE_CALL(cudaMalloc(&gpu_result, result_size));
@@ -71,7 +94,7 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 															cudaMemcpyHostToDevice));
 
 		int threads_per_block = 512;
-		int blocks_per_grid = 65564;
+		int blocks_per_grid = 65535;
 
 		// [16, 4096]
 		dim3 dim_threads_per_block(threads_per_block, 1, 1);
