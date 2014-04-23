@@ -15,8 +15,20 @@ __global__ void distance2048NormalKernel(float* gpuImage, float* gpuTemp, float*
 			- gpuImage[(offX+blockIdx.y)*iWidth + offY + 512*blockIndexX + threadIdx.x];
 		gpuResults[4194304*(blockIdx.x%4) + 2048*blockIdx.y + 512*blockIndexX + threadIdx.x]
 			= distance * distance;
+	}	
+}
+
+__global__ void distance2048ReversedKernel(float* gpuImage, float* gpuTemp, float* gpuResults,
+																					 int offX, int offY, int iWidth) {
+	int blockIndexX = blockIdx.x / 4;
+	offY += blockIdx.x % 4;
+	if (offY + 512*blockIndexX + threadIdx.x < iWidth) {
+		float distance
+			= gpuTemp[4194304 - 2048*blockIdx.y - 512*blockIndexX - threadIdx.x]
+			- gpuImage[(offX+blockIdx.y)*iWidth + offY + 512*blockIndexX + threadIdx.x];
+		gpuResults[4194304*(blockIdx.x%4) + 2048*blockIdx.y + 512*blockIndexX + threadIdx.x]
+			= distance * distance;
 	}
-	
 }
 
 __global__ void reduction2048SumKernel(float* gpuResults, unsigned int tempSize, unsigned int level) {
@@ -52,7 +64,7 @@ __global__ void distance4096NormalKernel(float* gpuImage, float* gpuTemp, float*
 __global__ void distance4096ReversedKernel(float* gpuImage, float* gpuTemp, float* gpuResult, float* gpuTest,
 																					 int offX, int offY, int iWidth, int tempSize) {
 	float distance
-		= gpuTemp[tempSize - 4096*blockIdx.y + 512*blockIdx.x + threadIdx.x]
+		= gpuTemp[tempSize - 4096*blockIdx.y - 512*blockIdx.x - threadIdx.x]
 		- gpuImage[(offX+blockIdx.y)*iWidth + offY + 512*blockIdx.x + threadIdx.x];
 	gpuResult[4096*blockIdx.y + 512*blockIdx.x + threadIdx.x] = distance * distance;
 }
