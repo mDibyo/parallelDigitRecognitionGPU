@@ -16,6 +16,14 @@ __global__ void distance512NormalKernel(float* gpuImage, float* gpuTemp, float* 
 	}
 }
 
+__global__ void reduction512SumKernel(float* gpuResults, unsigned int tempSize, int numResults,
+																			unsigned int level) {
+	unsigned int resultIndex = 2*level*(blockIdx.x*blockDim.x + threadIdx.x);
+	if ((resultIndex + level) < (tempSize*numResults)) {
+		gpuResults[resultIndex] += gpuResults[resultIndex + level];
+	}
+}
+
 __global__ void distance2048NormalKernel(float* gpuImage, float* gpuTemp, float* gpuResults,
 																				 int offX, int offY, int iWidth) {
 	int blockIndexX = blockIdx.x / 4;
@@ -118,6 +126,20 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 					(gpu_image, gpu_temp, gpu_results, off_x, off_y, i_width, t_width);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
+
+				unsigned int level = 1;
+				blocks_per_grid = num_results * t_width;
+				while (level < temp_size) {
+					reduction512SumKernel<<<blocks_per_grid, t_width>>>
+						(gpu_results, temp_size, num_results, level);
+					cudaThreadSynchronize();
+					CUT_CHECK_ERROR("");
+					level *= 2;
+					blocks_per_grid /= 2;
+					if (blocks_per_grid == 0) {
+						blocks_per_grid = 1;
+					}
+				}
 			}
 		}
 
