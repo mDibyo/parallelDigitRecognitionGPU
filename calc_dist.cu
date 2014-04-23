@@ -9,7 +9,7 @@ __global__ void distance2048NormalKernel(float* gpuImage, float* gpuTemp, float*
 																				 int offX, int offY, int iWidth) {
 	int blockIndexX = blockIdx.x / 4;
 	offY += blockIdx.x % 4;
-	if (offY + 512*blockIdx.x + threadIdx.x < iWidth) {
+	if (offY + 512*blockIndexX + threadIdx.x < iWidth) {
 		float distance
 			= gpuTemp[2048*blockIdx.y + 512*blockIndexX + threadIdx.x]
 			- gpuImage[(offX+blockIdx.y)*iWidth + offY + 512*blockIndexX + threadIdx.x];
@@ -95,7 +95,7 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 
 				unsigned int level = 1;
 				blocks_per_grid = 4 * 4 * 2048;
-				while (level < (temp_size/4)) {
+				while (level < temp_size) {
 					dim3 dim_threads_per_block(threads_per_block, 1, 1);
 					dim3 dim_blocks_per_grid(blocks_per_grid, 1);
 					reduction2048SumKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
