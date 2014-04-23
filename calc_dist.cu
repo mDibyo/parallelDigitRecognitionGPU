@@ -99,6 +99,14 @@ __global__ void distance512ReversedTransposedFlippedKernel(float* gpuImage, floa
 	}
 }
 
+__global__ void transpose512Kernel(float* gpuTemp, int tWidth) {
+	if (threadIdx.x > blockIdx.x) {
+		float temp = gpu[tWidth*blockIdx.x + threadIdx.x];
+		gpu[tWidth*blockIdx.x + threadIdx.x] = gpu[tWidth*threadIdx.x + blockIdx.x];
+		gpu[tWidth*threadIdx.x + blockIdx.x] = temp;
+	}
+}
+
 __global__ void reduction512SumKernel(float* gpuResults, unsigned int tempSize, int numResults,
 																			unsigned int level) {
 	unsigned int resultIndex = 2*level*(blockIdx.x*blockDim.x + threadIdx.x);
@@ -620,6 +628,10 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 
 			}
 		}
+
+		transpose512Kernel<<<tWidth, tWidth>>>(gpu_temp, t_width);
+		cudaThreadSynchronize();
+		CUT_CHECK_ERROR("");
 
 		CUDA_SAFE_CALL(cudaFree(gpu_results));
 
