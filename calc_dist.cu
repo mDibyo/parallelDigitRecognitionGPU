@@ -7,6 +7,7 @@
 
 
 
+
 ////////////////////////////
 /// <= 512 TEMPLATE SIZE ///
 ////////////////////////////
@@ -229,6 +230,13 @@ __global__ void reduction2048MaxKernel(float* gpuResults) {
 	}
 }
 
+
+
+
+//////////////////////////
+/// 4096 TEMPLATE SIZE ///
+//////////////////////////
+
 __global__ void distance4096NormalKernel(float* gpuImage, float* gpuTemp, float* gpuResult, float* gpuTest,
 																				 int offX, int offY, int iWidth) {
 	float distance
@@ -237,10 +245,26 @@ __global__ void distance4096NormalKernel(float* gpuImage, float* gpuTemp, float*
 	gpuResult[4096*blockIdx.y + 512*blockIdx.x + threadIdx.x] = distance * distance;
 }
 
+__global__ void distance4096NormalFlippedKernel(float* gpuImage, float* gpuTemp, float* gpuResult, float* gpuTest,
+																				 int offX, int offY, int iWidth) {
+	float distance
+		= gpuTemp[4096*(blockIdx.y+1) - 512*blockIdx.x - threadIdx.x - 1]
+		- gpuImage[(offX+blockIdx.y)*iWidth + offY + 512*blockIdx.x + threadIdx.x];
+	gpuResult[4096*blockIdx.y + 512*blockIdx.x + threadIdx.x] = distance * distance;
+}
+
 __global__ void distance4096ReversedKernel(float* gpuImage, float* gpuTemp, float* gpuResult, float* gpuTest,
 																					 int offX, int offY, int iWidth, int tempSize) {
 	float distance
-		= gpuTemp[tempSize - 4096*blockIdx.y - 512*blockIdx.x - threadIdx.x]
+		= gpuTemp[tempSize - 4096*blockIdx.y - 512*blockIdx.x - threadIdx.x - 1]
+		- gpuImage[(offX+blockIdx.y)*iWidth + offY + 512*blockIdx.x + threadIdx.x];
+	gpuResult[4096*blockIdx.y + 512*blockIdx.x + threadIdx.x] = distance * distance;
+}
+
+__global__ void distance4096ReversedFlippedKernel(float* gpuImage, float* gpuTemp, float* gpuResult, float* gpuTest,
+																					 int offX, int offY, int iWidth, int tempSize) {
+	float distance
+		= gpuTemp[tempSize - 4096*(blockIdx.y+1) + 512*blockIdx.x + threadIdx.x]
 		- gpuImage[(offX+blockIdx.y)*iWidth + offY + 512*blockIdx.x + threadIdx.x];
 	gpuResult[4096*blockIdx.y + 512*blockIdx.x + threadIdx.x] = distance * distance;
 }
@@ -980,6 +1004,7 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 		dim3 dim_threads_per_block(threads_per_block, 1, 1);
 		dim3 dim_blocks_per_grid(8, 4096);
 
+		// Normal
 		for (int off_x = 0; off_x < trans_height; off_x++) {
 			for (int off_y = 0; off_y < trans_width; off_y++) {
 				distance4096NormalKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
@@ -1011,6 +1036,39 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 			}
 		}
 
+		// Normal Flip
+		for (int off_x = 0; off_x < trans_height; off_x++) {
+			for (int off_y = 0; off_y < trans_width; off_y++) {
+				distance4096NormalFlippedKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
+					(gpu_image, gpu_temp, gpu_result, gpu_test, off_x , off_y, i_width);
+				cudaThreadSynchronize();
+				CUT_CHECK_ERROR("");
+
+				unsigned int level = 1;
+				blocks_per_grid = 8 * 4096;
+				while (level < temp_size) {
+					// printf("%d level reduction with %d blocks\n", level, blocks_per_grid);
+					reduction4096Kernel<<<blocks_per_grid, threads_per_block>>>
+						(gpu_result, temp_size, level);
+					cudaThreadSynchronize();
+					CUT_CHECK_ERROR("");
+					level *= 2;
+					blocks_per_grid /= 2;
+					if (blocks_per_grid == 0) {
+						blocks_per_grid = 1;
+					}
+				}
+
+				CUDA_SAFE_CALL(cudaMemcpy(&new_distance, gpu_result, sizeof(float),
+																	cudaMemcpyDeviceToHost));
+				if (new_distance < least_distance) {
+					least_distance = new_distance;
+				}
+
+			}
+		}
+
+		// Reverse
 		for (int off_x = 0; off_x < trans_height; off_x++) {
 			for (int off_y = 0; off_y < trans_width; off_y++) {
 				distance4096ReversedKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
@@ -1041,6 +1099,7 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 
 			}
 		}
+
 		CUDA_SAFE_CALL(cudaMemcpy(test, gpu_test, test_size,
 																	cudaMemcpyDeviceToHost));
 		CUDA_SAFE_CALL(cudaFree(gpu_result));
