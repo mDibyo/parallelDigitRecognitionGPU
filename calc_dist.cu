@@ -5,6 +5,17 @@
 #include <cutil.h>
 #include "utils.h"
 
+__global__ void distance512NormalKernel(float* gpuImage, float* gpuTemp, float* gpuResults,
+																				int offX, int offY, int iWidth, int tWidth) {
+	if ((offY + blockIdx.x + tWidth) < iWidth) {
+		float distance
+			= gpuTemp[tWidth*blockIdx.y + threadIdx.x]
+			- gpuImage[(offX+blockIdx.y)*iWidth + offY + blockIdx.x + threadIdx.x];
+		gpuResults[tWidth*tWidth*blockIdx.x + tWidth*blockIdx.y + threadIdx.x]
+			= distance * distance;
+	}
+}
+
 __global__ void distance2048NormalKernel(float* gpuImage, float* gpuTemp, float* gpuResults,
 																				 int offX, int offY, int iWidth) {
 	int blockIndexX = blockIdx.x / 4;
@@ -22,7 +33,7 @@ __global__ void distance2048ReversedKernel(float* gpuImage, float* gpuTemp, floa
 																					 int offX, int offY, int iWidth) {
 	int blockIndexX = blockIdx.x / 4;
 	offY += blockIdx.x % 4;
-	if (offY + 512*blockIndexX + threadIdx.x < iWidth) {
+	if ((offY + 512*blockIndexX + 512) < iWidth) {
 		float distance
 			= gpuTemp[4194304 - 2048*blockIdx.y - 512*blockIndexX - threadIdx.x]
 			- gpuImage[(offX+blockIdx.y)*iWidth + offY + 512*blockIndexX + threadIdx.x];
@@ -99,9 +110,11 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 		float* gpu_results;
 		CUDA_SAFE_CALL(cudaMalloc(&gpu_results, result_size*num_results));
 
+		dim3 dim_blocks_per_grid(num_results, t_width);
+
 		for (int off_x = 0; off_x < trans_height; off_x ++) {
 			for (int off_y = 0; off_y < trans_width; off_y += num_results) {
-				distance512NormalKernel<<<t_width, num_results>>>
+				distance512NormalKernel<<<dim_blocks_per_grid, t_width>>>
 					(gpu_image, gpu_temp, gpu_results, off_x, off_y, i_width, t_width);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
