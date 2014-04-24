@@ -681,6 +681,26 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 
 		CUDA_SAFE_CALL(cudaFree(gpu_results));
 
+	}	else if (t_width == 1024) {
+
+		size_t result_size = temp_size*sizeof(float);
+		float* gpu_results;
+		CUDA_SAFE_CALL(cudaMalloc(&gpu_results, result_size*16));
+
+		dim3 dim_threads_per_block(threads_per_block, 1, 1);
+		dim3 dim_blocks_per_grid(32, 1024);
+
+		// Normal
+		for (int off_x = 0; off_x < trans_height; off_x ++) {
+			for (int off_y = 0; off_y < trans_width; off_y += 16) {
+				distance1024NormalKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
+					(gpu_image, gpu_temp, gpu_results, off_x, off_y, i_width);
+				cudaThreadSynchronize();
+				CUT_CHECK_ERROR("");
+				
+			}
+		}
+
 	}	else if (t_width == 2048) {
 
 		size_t result_size = temp_size*sizeof(float);
