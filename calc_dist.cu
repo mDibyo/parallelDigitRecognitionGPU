@@ -133,6 +133,26 @@ __global__ void reduction512MaxKernel(float* gpuResults, unsigned int tempSize, 
 /// 2048 TEMPLATE SIZE ///
 //////////////////////////
 
+__global__ void distance1024NormalKernel(float* gpuImage, float* gpuTemp, float* gpuResults,
+																				 int offX, int offY, int iWidth) {
+	int blockIndexX = blockIdx.x / 16;
+	offY += blockIdx.x % 16;
+	if ((offY + 512*blockIndexX + 512) <= iWidth) {
+		float distance
+			= gpuTemp[1024*blockIdx.y + 512*blockIndexX + threadIdx.x]
+			- gpuImage[(offX+blockIdx.y)*iWidth + offY + 512*blockIndexX + threadIdx.x];
+		gpuResults[1048576*(blockIdx.x%16) + 1024*blockIdx.y + 512*blockIndexX + threadIdx.x]
+			= distance * distance;
+	}
+}
+
+
+
+
+//////////////////////////
+/// 2048 TEMPLATE SIZE ///
+//////////////////////////
+
 __global__ void distance2048NormalKernel(float* gpuImage, float* gpuTemp, float* gpuResults,
 																				 int offX, int offY, int iWidth) {
 	int blockIndexX = blockIdx.x / 4;
@@ -697,7 +717,7 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 					(gpu_image, gpu_temp, gpu_results, off_x, off_y, i_width);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
-				
+
 			}
 		}
 
