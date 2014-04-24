@@ -287,12 +287,11 @@ __global__ void distance2048ReversedFlippedKernel(float* gpuImage, float* gpuTem
 }
 
 __global__ void transpose2048Kernel(float* gpuTemp) {
-	int blockIndexX = blockIdx.x / 4;
-	if (512*blockIndexX + threadIdx.x > blockIdx.y) {
-		float temp = gpuTemp[2048*blockIdx.y + 512*blockIndexX + threadIdx.x];
-		gpuTemp[2048*blockIdx.y + 512*blockIndexX + threadIdx.x]
-			= gpuTemp[2048*(512*blockIndexX + threadIdx.x) + blockIdx.y];
-		gpuTemp[2048*(512*blockIndexX + threadIdx.x) + blockIdx.y] = temp;
+	if (512*blockIdx.x + threadIdx.x > blockIdx.y) {
+		float temp = gpuTemp[2048*blockIdx.y + 512*blockIdx.x + threadIdx.x];
+		gpuTemp[2048*blockIdx.y + 512*blockIdx.x + threadIdx.x]
+			= gpuTemp[2048*(512*blockIdx.x + threadIdx.x) + blockIdx.y];
+		gpuTemp[2048*(512*blockIdx.x + threadIdx.x) + blockIdx.y] = temp;
 	}
 }
 
@@ -1094,9 +1093,12 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 			}
 		}
 
-		transpose2048Kernel<<<dim_blocks_per_grid, dim_threads_per_block>>>(gpu_temp);
-		cudaThreadSynchronize();
-		CUT_CHECK_ERROR("");
+		{
+			dim3 dim_blocks_per_grid(4, 2048);
+			transpose2048Kernel<<<dim_blocks_per_grid, dim_threads_per_block>>>(gpu_temp);
+			cudaThreadSynchronize();
+			CUT_CHECK_ERROR("");
+		}
 
 		// Normal
 		for (int off_x = 0; off_x < trans_height; off_x ++) {
