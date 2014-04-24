@@ -992,19 +992,6 @@ __global__ void distance2048NormalKernel(float* gpuImage, float* gpuTemp, float*
 	}	
 }
 
-__global__ void distance2048NormalTransposeKernel(float* gpuImage, float* gpuTemp, float* gpuResults,
-																									int offX, int offY, int iWidth) {
-	int blockIndexX = blockIdx.x / 4;
-	offY += blockIdx.x % 4;
-	if ((offY + 512*blockIndexX + 512) <= iWidth) {
-		float distance
-			= gpuTemp[blockIdx.y + 2048*(512*blockIndexX + threadIdx.x)]
-			- gpuImage[(offX+blockIdx.y)*iWidth + offY + 512*blockIndexX + threadIdx.x];
-		gpuResults[4194304*(blockIdx.x%4) + 2048*blockIdx.y + 512*blockIndexX + threadIdx.x]
-			= distance * distance;
-	}	
-}
-
 __global__ void distance2048NormalFlipKernel(float* gpuImage, float* gpuTemp, float* gpuResults,
 																						 int offX, int offY, int iWidth) {
 	int blockIndexX = blockIdx.x / 4;
@@ -1012,19 +999,6 @@ __global__ void distance2048NormalFlipKernel(float* gpuImage, float* gpuTemp, fl
 	if ((offY + 512*blockIndexX + 512) <= iWidth) {
 		float distance
 			= gpuTemp[2048*(blockIdx.y+1) - 512*blockIndexX - threadIdx.x - 1]
-			- gpuImage[(offX+blockIdx.y)*iWidth + offY + 512*blockIndexX + threadIdx.x];
-		gpuResults[4194304*(blockIdx.x%4) + 2048*blockIdx.y + 512*blockIndexX + threadIdx.x]
-			= distance * distance;
-	}	
-}
-
-__global__ void distance2048NormalTransposeFlipKernel(float* gpuImage, float* gpuTemp, float* gpuResults,
-																											int offX, int offY, int iWidth) {
-	int blockIndexX = blockIdx.x / 4;
-	offY += blockIdx.x % 4;
-	if ((offY + 512*blockIndexX + 512) <= iWidth) {
-		float distance
-			= gpuTemp[2048*(512*blockIndexX + threadIdx.x + 1) - blockIdx.y - 1]
 			- gpuImage[(offX+blockIdx.y)*iWidth + offY + 512*blockIndexX + threadIdx.x];
 		gpuResults[4194304*(blockIdx.x%4) + 2048*blockIdx.y + 512*blockIndexX + threadIdx.x]
 			= distance * distance;
