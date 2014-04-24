@@ -84,7 +84,7 @@ int benchmark_matrix(int N, int M, int T) {
 int main(int argc, char** argv) {
     srand(time(NULL));
 
-    for (int i = 16; i < 2048*2; i*=2) {
+    for (int i = 16; i < 4096*2; i*=2) {
         benchmark_matrix(i+100, i, i);
     }
 
