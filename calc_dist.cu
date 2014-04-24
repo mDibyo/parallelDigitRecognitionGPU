@@ -130,7 +130,7 @@ __global__ void reduction512MaxKernel(float* gpuResults, unsigned int tempSize, 
 
 
 //////////////////////////
-/// 2048 TEMPLATE SIZE ///
+/// 1024 TEMPLATE SIZE ///
 //////////////////////////
 
 __global__ void distance1024NormalKernel(float* gpuImage, float* gpuTemp, float* gpuResults,
@@ -146,10 +146,23 @@ __global__ void distance1024NormalKernel(float* gpuImage, float* gpuTemp, float*
 	}
 }
 
-__global__ void reduction1024SumKernel(float* gpuResults, unsigned int tempSize, insigned int level) {
-	unsigned int resultIndex = 2*level*(blockIdx.x*blockDim.x + threadIdx.x);
+__global__ void distance1024ReversedKernel(float* gpuImage, float* gpuTemp, float* gpuResults,
+																				 int offX, int offY, int iWidth) {
+	int blockIndexX = blockIdx.x / 16;
+	offY += blockIdx.x % 16;
+	if ((offY + 512*blockIndexX + 512) <= iWidth) {
+		float distance
+			= gpuTemp[1048576 - 1024*blockIdx.y - 512*blockIndexX - threadIdx.x - 1]
+			- gpuImage[(offX+blockIdx.y)*iWidth + offY + 512*blockIndexX + threadIdx.x];
+		gpuResults[1048576*(blockIdx.x%16) + 1024*blockIdx.y + 512*blockIndexX + threadIdx.x]
+			= distance * distance;
+	}
+}
+
+__global__ void reduction1024SumKernel(float* gpuResults, unsigned int tempSize, unsigned int level) {
+	int resultIndex = 2*level*(blockIdx.x*blockDim.x + threadIdx.x);
 	if ((resultIndex + level) < (tempSize*16)) {
-		gpuResults[resultIndex] = gpuResults[resultIndex + level];
+		gpuResults[resultIndex] += gpuResults[resultIndex + level];
 	}
 }
 
@@ -737,9 +750,7 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 				unsigned int level = 1;
 				blocks_per_grid = 16 * 2 * 1024;
 				while (level < temp_size) {
-					dim3 dim_threads_per_block(threads_per_block, 1, 1);
-					dim3 dim_blocks_per_grid(blocks_per_grid, 1);
-					reduction1024SumKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
+					reduction1024SumKernel<<<blocks_per_grid, threads_per_block>>>
 						(gpu_results, temp_size, level);
 					cudaThreadSynchronize();
 					CUT_CHECK_ERROR("");
@@ -750,13 +761,54 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 					}
 				}
 
-				while (level < temp_size*16) {
-					dim3 dim_threads_per_block(threads_per_block, 1, 1);
-					dim3 dim_blocks_per_grid(blocks_per_grid, 1);
-					reduction1024MaxKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
+				while (level < (temp_size*16)) {
+					reduction1024MaxKernel<<<blocks_per_grid, threads_per_block>>>
 						(gpu_results, temp_size, level);
-						cudaThreadSynchronize();
-						CUT_CHECK_ERROR("");
+					cudaThreadSynchronize();
+					CUT_CHECK_ERROR("");
+					level *= 2;
+					blocks_per_grid /= 2;
+					if (blocks_per_grid == 0) {
+						blocks_per_grid = 1;
+					}
+				}
+
+				CUDA_SAFE_CALL(cudaMemcpy(&new_distance, gpu_results, sizeof(float),
+																	cudaMemcpyDeviceToHost));
+				if (new_distance < least_distance) {
+					least_distance = new_distance;
+				}
+
+			}
+		}
+
+		// Reverse
+		for (int off_x = 0; off_x < trans_height; off_x ++) {
+			for (int off_y = 0; off_y < trans_width; off_y += 16) {
+				distance1024ReversedKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
+					(gpu_image, gpu_temp, gpu_results, off_x, off_y, i_width);
+				cudaThreadSynchronize();
+				CUT_CHECK_ERROR("");
+
+				unsigned int level = 1;
+				blocks_per_grid = 16 * 2 * 1024;
+				while (level < temp_size) {
+					reduction1024SumKernel<<<blocks_per_grid, threads_per_block>>>
+						(gpu_results, temp_size, level);
+					cudaThreadSynchronize();
+					CUT_CHECK_ERROR("");
+					level *= 2;
+					blocks_per_grid /= 2;
+					if (blocks_per_grid == 0) {
+						blocks_per_grid = 1;
+					}
+				}
+
+				while (level < (temp_size*16)) {
+					reduction1024MaxKernel<<<blocks_per_grid, threads_per_block>>>
+						(gpu_results, temp_size, level);
+					cudaThreadSynchronize();
+					CUT_CHECK_ERROR("");
 					level *= 2;
 					blocks_per_grid /= 2;
 					if (blocks_per_grid == 0) {
@@ -1114,7 +1166,6 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 		int threads_per_block = 512;
 		int blocks_per_grid = 65535;
 
-		// [16, 4096]
 		dim3 dim_threads_per_block(threads_per_block, 1, 1);
 		dim3 dim_blocks_per_grid(8, 4096);
 
