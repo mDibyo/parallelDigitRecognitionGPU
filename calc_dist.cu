@@ -185,6 +185,15 @@ __global__ void distance1024ReversedFlippedKernel(float* gpuImage, float* gpuTem
 	}
 }
 
+__global__ void transpose1024Kernel(float* gpuTemp) {
+	if (512*blockIdx.x + threadIdx.x > blockIdx.y) {
+		float temp = gpuTemp[1024*blockIdx.y + 512*blockIdx.x + threadIdx.x];
+		gpuTemp[1024*blockIdx.y + 512*blockIdx.x + threadIdx.x]
+			= gpuTemp[1024*(512*blockIdx.x + threadIdx.x) + blockIdx.y];
+		gpuTemp[1024*(512*blockIdx.x + threadIdx.x) + blockIdx.y] = temp;
+	}
+}
+
 __global__ void reduction1024SumKernel(float* gpuResults, unsigned int tempSize, unsigned int level) {
 	int resultIndex = 2*level*(blockIdx.x*blockDim.x + threadIdx.x);
 	if ((resultIndex + level) < (tempSize*16)) {
