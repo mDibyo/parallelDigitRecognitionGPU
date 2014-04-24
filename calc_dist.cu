@@ -718,6 +718,42 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 
+				unsigned int level = 1;
+				blocks_per_grid = 16 * 2 * 1024;
+				while (level < temp_size) {
+					dim3 dim_threads_per_block(threads_per_block, 1, 1);
+					dim3 dim_blocks_per_grid(blocks_per_grid, 1);
+					reduction1024SumKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
+						(gpu_results, temp_size, level);
+					cudaThreadSynchronize();
+					CUT_CHECK_ERROR("");
+					level *= 2;
+					blocks_per_grid /= 2;
+					if (blocks_per_grid == 0) {
+						blocks_per_grid = 1;
+					}
+				}
+
+				while (level < temp_size*16) {
+					dim3 dim_threads_per_block(threads_per_block, 1, 1);
+					dim3 dim_blocks_per_grid(blocks_per_grid, 1);
+					reduction1024MaxKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
+						(gpu_results, temp_size, level);
+						cudaThreadSynchronize();
+						CUT_CHECK_ERROR("");
+					level *= 2;
+					blocks_per_grid /= 2;
+					if (blocks_per_grid == 0) {
+						blocks_per_grid = 1;
+					}
+				}
+
+				CUDA_SAFE_CALL(cudaMemcpy(&new_distance, gpu_results, sizeof(float),
+																	cudaMemcpyDeviceToHost));
+				if (new_distance < least_distance) {
+					least_distance = new_distance;
+				}
+
 			}
 		}
 
