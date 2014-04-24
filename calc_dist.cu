@@ -945,6 +945,185 @@ float calc_min_dist(float *gpu_image, int i_width, int i_height,
 			}
 		}
 
+		{
+			dim3 dim_blocks_per_grid(2, 1024);
+			transpose1024Kernel<<<dim_blocks_per_grid, dim_threads_per_block>>>(gpu_temp);
+			cudaThreadSynchronize();
+			CUT_CHECK_ERROR("");
+		}
+
+		// Normal
+		for (int off_x = 0; off_x < trans_height; off_x ++) {
+			for (int off_y = 0; off_y < trans_width; off_y += 16) {
+				distance1024NormalKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
+					(gpu_image, gpu_temp, gpu_results, off_x, off_y, i_width);
+				cudaThreadSynchronize();
+				CUT_CHECK_ERROR("");
+
+				unsigned int level = 1;
+				blocks_per_grid = 16 * 2 * 1024;
+				while (level < temp_size) {
+					reduction1024SumKernel<<<blocks_per_grid, threads_per_block>>>
+						(gpu_results, temp_size, level);
+					cudaThreadSynchronize();
+					CUT_CHECK_ERROR("");
+					level *= 2;
+					blocks_per_grid /= 2;
+					if (blocks_per_grid == 0) {
+						blocks_per_grid = 1;
+					}
+				}
+
+				while (level < (temp_size*16)) {
+					reduction1024MaxKernel<<<blocks_per_grid, threads_per_block>>>
+						(gpu_results, temp_size, level);
+					cudaThreadSynchronize();
+					CUT_CHECK_ERROR("");
+					level *= 2;
+					blocks_per_grid /= 2;
+					if (blocks_per_grid == 0) {
+						blocks_per_grid = 1;
+					}
+				}
+
+				CUDA_SAFE_CALL(cudaMemcpy(&new_distance, gpu_results, sizeof(float),
+																	cudaMemcpyDeviceToHost));
+				if (new_distance < least_distance) {
+					least_distance = new_distance;
+				}
+
+			}
+		}
+
+		// Normal Flip
+		for (int off_x = 0; off_x < trans_height; off_x ++) {
+			for (int off_y = 0; off_y < trans_width; off_y += 16) {
+				distance1024NormalFlippedKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
+					(gpu_image, gpu_temp, gpu_results, off_x, off_y, i_width);
+				cudaThreadSynchronize();
+				CUT_CHECK_ERROR("");
+
+				unsigned int level = 1;
+				blocks_per_grid = 16 * 2 * 1024;
+				while (level < temp_size) {
+					reduction1024SumKernel<<<blocks_per_grid, threads_per_block>>>
+						(gpu_results, temp_size, level);
+					cudaThreadSynchronize();
+					CUT_CHECK_ERROR("");
+					level *= 2;
+					blocks_per_grid /= 2;
+					if (blocks_per_grid == 0) {
+						blocks_per_grid = 1;
+					}
+				}
+
+				while (level < (temp_size*16)) {
+					reduction1024MaxKernel<<<blocks_per_grid, threads_per_block>>>
+						(gpu_results, temp_size, level);
+					cudaThreadSynchronize();
+					CUT_CHECK_ERROR("");
+					level *= 2;
+					blocks_per_grid /= 2;
+					if (blocks_per_grid == 0) {
+						blocks_per_grid = 1;
+					}
+				}
+
+				CUDA_SAFE_CALL(cudaMemcpy(&new_distance, gpu_results, sizeof(float),
+																	cudaMemcpyDeviceToHost));
+				if (new_distance < least_distance) {
+					least_distance = new_distance;
+				}
+
+			}
+		}
+
+		// Reverse
+		for (int off_x = 0; off_x < trans_height; off_x ++) {
+			for (int off_y = 0; off_y < trans_width; off_y += 16) {
+				distance1024ReversedKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
+					(gpu_image, gpu_temp, gpu_results, off_x, off_y, i_width);
+				cudaThreadSynchronize();
+				CUT_CHECK_ERROR("");
+
+				unsigned int level = 1;
+				blocks_per_grid = 16 * 2 * 1024;
+				while (level < temp_size) {
+					reduction1024SumKernel<<<blocks_per_grid, threads_per_block>>>
+						(gpu_results, temp_size, level);
+					cudaThreadSynchronize();
+					CUT_CHECK_ERROR("");
+					level *= 2;
+					blocks_per_grid /= 2;
+					if (blocks_per_grid == 0) {
+						blocks_per_grid = 1;
+					}
+				}
+
+				while (level < (temp_size*16)) {
+					reduction1024MaxKernel<<<blocks_per_grid, threads_per_block>>>
+						(gpu_results, temp_size, level);
+					cudaThreadSynchronize();
+					CUT_CHECK_ERROR("");
+					level *= 2;
+					blocks_per_grid /= 2;
+					if (blocks_per_grid == 0) {
+						blocks_per_grid = 1;
+					}
+				}
+
+				CUDA_SAFE_CALL(cudaMemcpy(&new_distance, gpu_results, sizeof(float),
+																	cudaMemcpyDeviceToHost));
+				if (new_distance < least_distance) {
+					least_distance = new_distance;
+				}
+
+			}
+		}
+
+		// Reverse Flip
+		for (int off_x = 0; off_x < trans_height; off_x ++) {
+			for (int off_y = 0; off_y < trans_width; off_y += 16) {
+				distance1024ReversedFlippedKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
+					(gpu_image, gpu_temp, gpu_results, off_x, off_y, i_width);
+				cudaThreadSynchronize();
+				CUT_CHECK_ERROR("");
+
+				unsigned int level = 1;
+				blocks_per_grid = 16 * 2 * 1024;
+				while (level < temp_size) {
+					reduction1024SumKernel<<<blocks_per_grid, threads_per_block>>>
+						(gpu_results, temp_size, level);
+					cudaThreadSynchronize();
+					CUT_CHECK_ERROR("");
+					level *= 2;
+					blocks_per_grid /= 2;
+					if (blocks_per_grid == 0) {
+						blocks_per_grid = 1;
+					}
+				}
+
+				while (level < (temp_size*16)) {
+					reduction1024MaxKernel<<<blocks_per_grid, threads_per_block>>>
+						(gpu_results, temp_size, level);
+					cudaThreadSynchronize();
+					CUT_CHECK_ERROR("");
+					level *= 2;
+					blocks_per_grid /= 2;
+					if (blocks_per_grid == 0) {
+						blocks_per_grid = 1;
+					}
+				}
+
+				CUDA_SAFE_CALL(cudaMemcpy(&new_distance, gpu_results, sizeof(float),
+																	cudaMemcpyDeviceToHost));
+				if (new_distance < least_distance) {
+					least_distance = new_distance;
+				}
+
+			}
+		}
+
 	}	else if (t_width == 2048) {
 
 		size_t result_size = temp_size*sizeof(float);
