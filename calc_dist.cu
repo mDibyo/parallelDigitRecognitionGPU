@@ -25,7 +25,7 @@ __global__ void distance512NormalKernel(float* gpuImage, float* gpuTemp, float* 
 }
 
 __global__ void distance512NormalTransposeKernel(float* gpuImage, float* gpuTemp, float* gpuResults, int offX,
-																									int offY, int iWidth, int tWidth, int tempSize) {
+																								 int offY, int iWidth, int tWidth, int tempSize) {
 	if ((offY + blockIdx.x + tWidth) <= iWidth) {
 		float distance
 			= gpuTemp[tWidth*threadIdx.x + blockIdx.y]
@@ -36,7 +36,7 @@ __global__ void distance512NormalTransposeKernel(float* gpuImage, float* gpuTemp
 }
 
 __global__ void distance512NormalFlipKernel(float* gpuImage, float* gpuTemp, float* gpuResults, int offX,
-																							 int offY, int iWidth, int tWidth, int tempSize) {
+																						int offY, int iWidth, int tWidth, int tempSize) {
 	if ((offY + blockIdx.x + tWidth) <= iWidth) {
 		float distance
 			= gpuTemp[tWidth*(blockIdx.y+1) - threadIdx.x-1]
@@ -47,7 +47,7 @@ __global__ void distance512NormalFlipKernel(float* gpuImage, float* gpuTemp, flo
 }
 
 __global__ void distance512NormalTransposeFlipKernel(float* gpuImage, float* gpuTemp, float* gpuResults, int offX,
-																												 int offY, int iWidth, int tWidth, int tempSize) {
+																										 int offY, int iWidth, int tWidth, int tempSize) {
 	if ((offY + blockIdx.x + tWidth) <= iWidth) {
 		float distance
 			= gpuTemp[tWidth*(threadIdx.x+1) - blockIdx.y-1]
@@ -58,7 +58,7 @@ __global__ void distance512NormalTransposeFlipKernel(float* gpuImage, float* gpu
 }
 
 __global__ void distance512ReverseKernel(float* gpuImage, float* gpuTemp, float* gpuResults, int offX,
-																					int offY, int iWidth, int tWidth, int tempSize) {
+																				 int offY, int iWidth, int tWidth, int tempSize) {
 	if ((offY + blockIdx.x + tWidth) <= iWidth) {
 		float distance
 			= gpuTemp[tempSize - tWidth*blockIdx.y - threadIdx.x - 1]
@@ -69,7 +69,7 @@ __global__ void distance512ReverseKernel(float* gpuImage, float* gpuTemp, float*
 }
 
 __global__ void distance512ReverseTransposeKernel(float* gpuImage, float* gpuTemp, float* gpuResults, int offX,
-																										int offY, int iWidth, int tWidth, int tempSize) {
+																									int offY, int iWidth, int tWidth, int tempSize) {
 	if ((offY + blockIdx.x + tWidth) <= iWidth) {
 		float distance
 			= gpuTemp[tempSize - tWidth*threadIdx.x - blockIdx.y - 1]
@@ -80,7 +80,7 @@ __global__ void distance512ReverseTransposeKernel(float* gpuImage, float* gpuTem
 }
 
 __global__ void distance512ReverseFlipKernel(float* gpuImage, float* gpuTemp, float* gpuResults, int offX,
-																								 int offY, int iWidth, int tWidth, int tempSize) {
+																						 int offY, int iWidth, int tWidth, int tempSize) {
 	if ((offY + blockIdx.x + tWidth) <= iWidth) {
 		float distance
 			= gpuTemp[tempSize - tWidth*(blockIdx.y+1) + threadIdx.x]
@@ -91,7 +91,7 @@ __global__ void distance512ReverseFlipKernel(float* gpuImage, float* gpuTemp, fl
 }
 
 __global__ void distance512ReverseTransposeFlipKernel(float* gpuImage, float* gpuTemp, float* gpuResults, int offX,
-																													 int offY, int iWidth, int tWidth, int tempSize) {
+																											int offY, int iWidth, int tWidth, int tempSize) {
 	if ((offY + blockIdx.x + tWidth) <= iWidth) {
 		float distance
 			= gpuTemp[tempSize - tWidth*(threadIdx.x+1) + blockIdx.y]
@@ -149,7 +149,7 @@ float calc_min_dist_512(float* gpu_image, int i_width, int i_height,
 
 	dim3 dim_blocks_per_grid(num_results, t_width);
 
-	// Normal
+	// normal
 	for (int off_x = 0; off_x < trans_height; off_x ++) {
 		for (int off_y = 0; off_y < trans_width; off_y += num_results) {
 			distance512NormalKernel<<<dim_blocks_per_grid, t_width>>>
@@ -192,7 +192,7 @@ float calc_min_dist_512(float* gpu_image, int i_width, int i_height,
 		}
 	}
 
-	// Normal flip
+	// normal flip
 	for (int off_x = 0; off_x < trans_height; off_x ++) {
 		for (int off_y = 0; off_y < trans_width; off_y += num_results) {
 			distance512NormalFlipKernel<<<dim_blocks_per_grid, t_width>>>
@@ -236,7 +236,7 @@ float calc_min_dist_512(float* gpu_image, int i_width, int i_height,
 		}
 	}
 
-	// Reverse
+	// reverse
 	for (int off_x = 0; off_x < trans_height; off_x ++) {
 		for (int off_y = 0; off_y < trans_width; off_y += num_results) {
 			distance512ReverseKernel<<<dim_blocks_per_grid, t_width>>>
@@ -280,7 +280,7 @@ float calc_min_dist_512(float* gpu_image, int i_width, int i_height,
 		}
 	}
 
-	// Reverse flip
+	// reverse flip
 	for (int off_x = 0; off_x < trans_height; off_x ++) {
 		for (int off_y = 0; off_y < trans_width; off_y += num_results) {
 			distance512ReverseFlipKernel<<<dim_blocks_per_grid, t_width>>>
@@ -328,7 +328,7 @@ float calc_min_dist_512(float* gpu_image, int i_width, int i_height,
 	cudaThreadSynchronize();
 	CUT_CHECK_ERROR("");
 
-	// Normal
+	// normal
 	for (int off_x = 0; off_x < trans_height; off_x ++) {
 		for (int off_y = 0; off_y < trans_width; off_y += num_results) {
 			distance512NormalKernel<<<dim_blocks_per_grid, t_width>>>
@@ -372,7 +372,7 @@ float calc_min_dist_512(float* gpu_image, int i_width, int i_height,
 		}
 	}
 
-	// Normal flip
+	// normal flip
 	for (int off_x = 0; off_x < trans_height; off_x ++) {
 		for (int off_y = 0; off_y < trans_width; off_y += num_results) {
 			distance512NormalFlipKernel<<<dim_blocks_per_grid, t_width>>>
@@ -416,7 +416,7 @@ float calc_min_dist_512(float* gpu_image, int i_width, int i_height,
 		}
 	}
 
-	// Reverse
+	// reverse
 	for (int off_x = 0; off_x < trans_height; off_x ++) {
 		for (int off_y = 0; off_y < trans_width; off_y += num_results) {
 			distance512ReverseKernel<<<dim_blocks_per_grid, t_width>>>
@@ -460,7 +460,7 @@ float calc_min_dist_512(float* gpu_image, int i_width, int i_height,
 		}
 	}
 
-	// Reverse flip
+	// reverse flip
 	for (int off_x = 0; off_x < trans_height; off_x ++) {
 		for (int off_y = 0; off_y < trans_width; off_y += num_results) {
 			distance512ReverseFlipKernel<<<dim_blocks_per_grid, t_width>>>
@@ -532,7 +532,7 @@ __global__ void distance1024NormalKernel(float* gpuImage, float* gpuTemp, float*
 }
 
 __global__ void distance1024NormalFlipKernel(float* gpuImage, float* gpuTemp, float* gpuResults,
-																				 int offX, int offY, int iWidth) {
+																				 		 int offX, int offY, int iWidth) {
 	int blockIndexX = blockIdx.x / 16;
 	offY += blockIdx.x % 16;
 	if ((offY + 512*blockIndexX + 512) <= iWidth) {
@@ -545,7 +545,7 @@ __global__ void distance1024NormalFlipKernel(float* gpuImage, float* gpuTemp, fl
 }
 
 __global__ void distance1024ReverseKernel(float* gpuImage, float* gpuTemp, float* gpuResults,
-																				 int offX, int offY, int iWidth) {
+																					int offX, int offY, int iWidth) {
 	int blockIndexX = blockIdx.x / 16;
 	offY += blockIdx.x % 16;
 	if ((offY + 512*blockIndexX + 512) <= iWidth) {
@@ -558,7 +558,7 @@ __global__ void distance1024ReverseKernel(float* gpuImage, float* gpuTemp, float
 }
 
 __global__ void distance1024ReverseFlipKernel(float* gpuImage, float* gpuTemp, float* gpuResults,
-																				 int offX, int offY, int iWidth) {
+																							int offX, int offY, int iWidth) {
 	int blockIndexX = blockIdx.x / 16;
 	offY += blockIdx.x % 16;
 	if ((offY + 512*blockIndexX + 512) <= iWidth) {
@@ -579,31 +579,30 @@ __global__ void transpose1024Kernel(float* gpuTemp) {
 	}
 }
 
-__global__ void reduction1024SumKernel(float* gpuResults, unsigned int tempSize, unsigned int level) {
+__global__ void reduction1024SumKernel(float* gpuResults, unsigned int level) {
 	int resultIndex = 2*level*(blockIdx.x*blockDim.x + threadIdx.x);
-	if ((resultIndex + level) < (tempSize*16)) {
+	if ((resultIndex + level) < 16777216) {
 		gpuResults[resultIndex] += gpuResults[resultIndex + level];
 	}
 }
 
-__global__ void reduction1024MaxKernel(float* gpuResults, unsigned int tempSize, unsigned int level) {
+__global__ void reduction1024MaxKernel(float* gpuResults, unsigned int level) {
 	unsigned int resultIndex = 2*level*(blockIdx.x*blockDim.x + threadIdx.x);
-	if ((resultIndex + level) < (tempSize*16)) {
+	if ((resultIndex + level) < 16777216) {
 		if (gpuResults[resultIndex + level] < gpuResults[resultIndex]) {
 			gpuResults[resultIndex] = gpuResults[resultIndex + level];
 		}
 	}
 }
 
-float calc_min_dist_1024(float* gpu_image, int i_width, int i_height,
-												 float* gpu_temp, int t_width) {
+float calc_min_dist_1024(float* gpu_image, int i_width, int i_height, float* gpu_temp) {
 
 	float least_distance = FLT_MAX;
 	float new_distance = least_distance;
 
-	int trans_height = i_height - t_width + 1;
-	int trans_width = i_width - t_width + 1;
-	unsigned int temp_size = t_width * t_width;
+	int trans_height = i_height - 1024 + 1;
+	int trans_width = i_width - 1024 + 1;
+	unsigned int temp_size = 1024 * 1024;
 
 	int threads_per_block = 512;
 	int blocks_per_grid = 65535;
@@ -615,7 +614,7 @@ float calc_min_dist_1024(float* gpu_image, int i_width, int i_height,
 	dim3 dim_threads_per_block(threads_per_block, 1, 1);
 	dim3 dim_blocks_per_grid(32, 1024);
 
-	// Normal
+	// normal
 	for (int off_x = 0; off_x < trans_height; off_x ++) {
 		for (int off_y = 0; off_y < trans_width; off_y += 16) {
 			distance1024NormalKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
@@ -627,7 +626,7 @@ float calc_min_dist_1024(float* gpu_image, int i_width, int i_height,
 			blocks_per_grid = 16 * 2 * 1024;
 			while (level < temp_size) {
 				reduction1024SumKernel<<<blocks_per_grid, threads_per_block>>>
-					(gpu_results, temp_size, level);
+					(gpu_results, level);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 				level *= 2;
@@ -639,7 +638,7 @@ float calc_min_dist_1024(float* gpu_image, int i_width, int i_height,
 
 			while (level < (temp_size*16)) {
 				reduction1024MaxKernel<<<blocks_per_grid, threads_per_block>>>
-					(gpu_results, temp_size, level);
+					(gpu_results, level);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 				level *= 2;
@@ -658,7 +657,7 @@ float calc_min_dist_1024(float* gpu_image, int i_width, int i_height,
 		}
 	}
 
-	// Normal Flip
+	// normal flip
 	for (int off_x = 0; off_x < trans_height; off_x ++) {
 		for (int off_y = 0; off_y < trans_width; off_y += 16) {
 			distance1024NormalFlipKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
@@ -670,7 +669,7 @@ float calc_min_dist_1024(float* gpu_image, int i_width, int i_height,
 			blocks_per_grid = 16 * 2 * 1024;
 			while (level < temp_size) {
 				reduction1024SumKernel<<<blocks_per_grid, threads_per_block>>>
-					(gpu_results, temp_size, level);
+					(gpu_results, level);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 				level *= 2;
@@ -682,7 +681,7 @@ float calc_min_dist_1024(float* gpu_image, int i_width, int i_height,
 
 			while (level < (temp_size*16)) {
 				reduction1024MaxKernel<<<blocks_per_grid, threads_per_block>>>
-					(gpu_results, temp_size, level);
+					(gpu_results, level);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 				level *= 2;
@@ -701,7 +700,7 @@ float calc_min_dist_1024(float* gpu_image, int i_width, int i_height,
 		}
 	}
 
-	// Reverse
+	// reverse
 	for (int off_x = 0; off_x < trans_height; off_x ++) {
 		for (int off_y = 0; off_y < trans_width; off_y += 16) {
 			distance1024ReverseKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
@@ -713,7 +712,7 @@ float calc_min_dist_1024(float* gpu_image, int i_width, int i_height,
 			blocks_per_grid = 16 * 2 * 1024;
 			while (level < temp_size) {
 				reduction1024SumKernel<<<blocks_per_grid, threads_per_block>>>
-					(gpu_results, temp_size, level);
+					(gpu_results, level);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 				level *= 2;
@@ -725,7 +724,7 @@ float calc_min_dist_1024(float* gpu_image, int i_width, int i_height,
 
 			while (level < (temp_size*16)) {
 				reduction1024MaxKernel<<<blocks_per_grid, threads_per_block>>>
-					(gpu_results, temp_size, level);
+					(gpu_results, level);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 				level *= 2;
@@ -744,7 +743,7 @@ float calc_min_dist_1024(float* gpu_image, int i_width, int i_height,
 		}
 	}
 
-	// Reverse Flip
+	// reverse flip
 	for (int off_x = 0; off_x < trans_height; off_x ++) {
 		for (int off_y = 0; off_y < trans_width; off_y += 16) {
 			distance1024ReverseFlipKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
@@ -756,7 +755,7 @@ float calc_min_dist_1024(float* gpu_image, int i_width, int i_height,
 			blocks_per_grid = 16 * 2 * 1024;
 			while (level < temp_size) {
 				reduction1024SumKernel<<<blocks_per_grid, threads_per_block>>>
-					(gpu_results, temp_size, level);
+					(gpu_results, level);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 				level *= 2;
@@ -768,7 +767,7 @@ float calc_min_dist_1024(float* gpu_image, int i_width, int i_height,
 
 			while (level < (temp_size*16)) {
 				reduction1024MaxKernel<<<blocks_per_grid, threads_per_block>>>
-					(gpu_results, temp_size, level);
+					(gpu_results, level);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 				level *= 2;
@@ -794,7 +793,7 @@ float calc_min_dist_1024(float* gpu_image, int i_width, int i_height,
 		CUT_CHECK_ERROR("");
 	}
 
-	// Normal
+	// normal
 	for (int off_x = 0; off_x < trans_height; off_x ++) {
 		for (int off_y = 0; off_y < trans_width; off_y += 16) {
 			distance1024NormalKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
@@ -806,7 +805,7 @@ float calc_min_dist_1024(float* gpu_image, int i_width, int i_height,
 			blocks_per_grid = 16 * 2 * 1024;
 			while (level < temp_size) {
 				reduction1024SumKernel<<<blocks_per_grid, threads_per_block>>>
-					(gpu_results, temp_size, level);
+					(gpu_results, level);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 				level *= 2;
@@ -818,7 +817,7 @@ float calc_min_dist_1024(float* gpu_image, int i_width, int i_height,
 
 			while (level < (temp_size*16)) {
 				reduction1024MaxKernel<<<blocks_per_grid, threads_per_block>>>
-					(gpu_results, temp_size, level);
+					(gpu_results, level);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 				level *= 2;
@@ -837,7 +836,7 @@ float calc_min_dist_1024(float* gpu_image, int i_width, int i_height,
 		}
 	}
 
-	// Normal Flip
+	// normal flip
 	for (int off_x = 0; off_x < trans_height; off_x ++) {
 		for (int off_y = 0; off_y < trans_width; off_y += 16) {
 			distance1024NormalFlipKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
@@ -849,7 +848,7 @@ float calc_min_dist_1024(float* gpu_image, int i_width, int i_height,
 			blocks_per_grid = 16 * 2 * 1024;
 			while (level < temp_size) {
 				reduction1024SumKernel<<<blocks_per_grid, threads_per_block>>>
-					(gpu_results, temp_size, level);
+					(gpu_results, level);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 				level *= 2;
@@ -861,7 +860,7 @@ float calc_min_dist_1024(float* gpu_image, int i_width, int i_height,
 
 			while (level < (temp_size*16)) {
 				reduction1024MaxKernel<<<blocks_per_grid, threads_per_block>>>
-					(gpu_results, temp_size, level);
+					(gpu_results, level);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 				level *= 2;
@@ -880,7 +879,7 @@ float calc_min_dist_1024(float* gpu_image, int i_width, int i_height,
 		}
 	}
 
-	// Reverse
+	// reverse
 	for (int off_x = 0; off_x < trans_height; off_x ++) {
 		for (int off_y = 0; off_y < trans_width; off_y += 16) {
 			distance1024ReverseKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
@@ -892,7 +891,7 @@ float calc_min_dist_1024(float* gpu_image, int i_width, int i_height,
 			blocks_per_grid = 16 * 2 * 1024;
 			while (level < temp_size) {
 				reduction1024SumKernel<<<blocks_per_grid, threads_per_block>>>
-					(gpu_results, temp_size, level);
+					(gpu_results, level);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 				level *= 2;
@@ -904,7 +903,7 @@ float calc_min_dist_1024(float* gpu_image, int i_width, int i_height,
 
 			while (level < (temp_size*16)) {
 				reduction1024MaxKernel<<<blocks_per_grid, threads_per_block>>>
-					(gpu_results, temp_size, level);
+					(gpu_results, level);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 				level *= 2;
@@ -923,7 +922,7 @@ float calc_min_dist_1024(float* gpu_image, int i_width, int i_height,
 		}
 	}
 
-	// Reverse Flip
+	// reverse flip
 	for (int off_x = 0; off_x < trans_height; off_x ++) {
 		for (int off_y = 0; off_y < trans_width; off_y += 16) {
 			distance1024ReverseFlipKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
@@ -935,7 +934,7 @@ float calc_min_dist_1024(float* gpu_image, int i_width, int i_height,
 			blocks_per_grid = 16 * 2 * 1024;
 			while (level < temp_size) {
 				reduction1024SumKernel<<<blocks_per_grid, threads_per_block>>>
-					(gpu_results, temp_size, level);
+					(gpu_results, level);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 				level *= 2;
@@ -947,7 +946,7 @@ float calc_min_dist_1024(float* gpu_image, int i_width, int i_height,
 
 			while (level < (temp_size*16)) {
 				reduction1024MaxKernel<<<blocks_per_grid, threads_per_block>>>
-					(gpu_results, temp_size, level);
+					(gpu_results, level);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 				level *= 2;
@@ -994,7 +993,7 @@ __global__ void distance2048NormalKernel(float* gpuImage, float* gpuTemp, float*
 }
 
 __global__ void distance2048NormalTransposeKernel(float* gpuImage, float* gpuTemp, float* gpuResults,
-																				 int offX, int offY, int iWidth) {
+																									int offX, int offY, int iWidth) {
 	int blockIndexX = blockIdx.x / 4;
 	offY += blockIdx.x % 4;
 	if ((offY + 512*blockIndexX + 512) <= iWidth) {
@@ -1007,7 +1006,7 @@ __global__ void distance2048NormalTransposeKernel(float* gpuImage, float* gpuTem
 }
 
 __global__ void distance2048NormalFlipKernel(float* gpuImage, float* gpuTemp, float* gpuResults,
-																				 int offX, int offY, int iWidth) {
+																						 int offX, int offY, int iWidth) {
 	int blockIndexX = blockIdx.x / 4;
 	offY += blockIdx.x % 4;
 	if ((offY + 512*blockIndexX + 512) <= iWidth) {
@@ -1020,7 +1019,7 @@ __global__ void distance2048NormalFlipKernel(float* gpuImage, float* gpuTemp, fl
 }
 
 __global__ void distance2048NormalTransposeFlipKernel(float* gpuImage, float* gpuTemp, float* gpuResults,
-																				 int offX, int offY, int iWidth) {
+																											int offX, int offY, int iWidth) {
 	int blockIndexX = blockIdx.x / 4;
 	offY += blockIdx.x % 4;
 	if ((offY + 512*blockIndexX + 512) <= iWidth) {
@@ -1033,7 +1032,7 @@ __global__ void distance2048NormalTransposeFlipKernel(float* gpuImage, float* gp
 }
 
 __global__ void distance2048ReverseKernel(float* gpuImage, float* gpuTemp, float* gpuResults,
-																					 int offX, int offY, int iWidth) {
+																					int offX, int offY, int iWidth) {
 	int blockIndexX = blockIdx.x / 4;
 	offY += blockIdx.x % 4;
 	if ((offY + 512*blockIndexX + 512) < iWidth) {
@@ -1046,7 +1045,7 @@ __global__ void distance2048ReverseKernel(float* gpuImage, float* gpuTemp, float
 }
 
 __global__ void distance2048ReverseFlipKernel(float* gpuImage, float* gpuTemp, float* gpuResults,
-																					 int offX, int offY, int iWidth) {
+																							int offX, int offY, int iWidth) {
 	int blockIndexX = blockIdx.x / 4;
 	offY += blockIdx.x % 4;
 	if ((offY + 512*blockIndexX + 512) < iWidth) {
@@ -1067,9 +1066,9 @@ __global__ void transpose2048Kernel(float* gpuTemp) {
 	}
 }
 
-__global__ void reduction2048SumKernel(float* gpuResults, unsigned int tempSize, unsigned int level) {
+__global__ void reduction2048SumKernel(float* gpuResults, unsigned int level) {
 	int resultIndex = 2*level*(blockIdx.x*blockDim.x + threadIdx.x);
-	if ((resultIndex + level) < tempSize*4) {
+	if ((resultIndex + level) < 16777216) {
 		gpuResults[resultIndex] += gpuResults[resultIndex + level];
 	}
 }
@@ -1089,15 +1088,14 @@ __global__ void reduction2048MaxKernel(float* gpuResults) {
 	}
 }
 
-float calc_min_dist_2048(float* gpu_image, int i_width, int i_height,
-												 float* gpu_temp, int t_width) {
+float calc_min_dist_2048(float* gpu_image, int i_width, int i_height, float* gpu_temp) {
 
 	float least_distance = FLT_MAX;
 	float new_distance = least_distance;
 
-	int trans_height = i_height - t_width + 1;
-	int trans_width = i_width - t_width + 1;
-	unsigned int temp_size = t_width * t_width;
+	int trans_height = i_height - 2048 + 1;
+	int trans_width = i_width - 2048 + 1;
+	unsigned int temp_size = 2048 * 2048;
 
 	int threads_per_block = 512;
 	int blocks_per_grid = 65535;
@@ -1109,7 +1107,7 @@ float calc_min_dist_2048(float* gpu_image, int i_width, int i_height,
 	dim3 dim_threads_per_block(threads_per_block, 1, 1);
 	dim3 dim_blocks_per_grid(16, 2048);
 
-	// Normal
+	// normal
 	for (int off_x = 0; off_x < trans_height; off_x ++) {
 		for (int off_y = 0; off_y < trans_width; off_y += 4) {
 			distance2048NormalKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
@@ -1123,7 +1121,7 @@ float calc_min_dist_2048(float* gpu_image, int i_width, int i_height,
 				dim3 dim_threads_per_block(threads_per_block, 1, 1);
 				dim3 dim_blocks_per_grid(blocks_per_grid, 1);
 				reduction2048SumKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
-					(gpu_results, temp_size, level);
+					(gpu_results, level);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 				level *= 2;
@@ -1146,7 +1144,7 @@ float calc_min_dist_2048(float* gpu_image, int i_width, int i_height,
 		}
 	}
 
-	// Normal Flip
+	// normal flip
 	for (int off_x = 0; off_x < trans_height; off_x ++) {
 		for (int off_y = 0; off_y < trans_width; off_y += 4) {
 			distance2048NormalFlipKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
@@ -1160,7 +1158,7 @@ float calc_min_dist_2048(float* gpu_image, int i_width, int i_height,
 				dim3 dim_threads_per_block(threads_per_block, 1, 1);
 				dim3 dim_blocks_per_grid(blocks_per_grid, 1);
 				reduction2048SumKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
-					(gpu_results, temp_size, level);
+					(gpu_results, level);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 				level *= 2;
@@ -1183,7 +1181,7 @@ float calc_min_dist_2048(float* gpu_image, int i_width, int i_height,
 		}
 	}
 
-	// Reverse
+	// reverse
 	for (int off_x = 0; off_x < trans_height; off_x ++) {
 		for (int off_y = 0; off_y < trans_width; off_y += 4) {
 			distance2048ReverseKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
@@ -1197,7 +1195,7 @@ float calc_min_dist_2048(float* gpu_image, int i_width, int i_height,
 				dim3 dim_threads_per_block(threads_per_block, 1, 1);
 				dim3 dim_blocks_per_grid(blocks_per_grid, 1);
 				reduction2048SumKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
-					(gpu_results, temp_size, level);
+					(gpu_results, level);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 				level *= 2;
@@ -1220,7 +1218,7 @@ float calc_min_dist_2048(float* gpu_image, int i_width, int i_height,
 		}
 	}
 
-	// Reverse Flip
+	// reverse flip
 	for (int off_x = 0; off_x < trans_height; off_x ++) {
 		for (int off_y = 0; off_y < trans_width; off_y += 4) {
 			distance2048ReverseFlipKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
@@ -1234,7 +1232,7 @@ float calc_min_dist_2048(float* gpu_image, int i_width, int i_height,
 				dim3 dim_threads_per_block(threads_per_block, 1, 1);
 				dim3 dim_blocks_per_grid(blocks_per_grid, 1);
 				reduction2048SumKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
-					(gpu_results, temp_size, level);
+					(gpu_results, level);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 				level *= 2;
@@ -1264,7 +1262,7 @@ float calc_min_dist_2048(float* gpu_image, int i_width, int i_height,
 		CUT_CHECK_ERROR("");
 	}
 
-	// Normal
+	// normal
 	for (int off_x = 0; off_x < trans_height; off_x ++) {
 		for (int off_y = 0; off_y < trans_width; off_y += 4) {
 			distance2048NormalKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
@@ -1278,7 +1276,7 @@ float calc_min_dist_2048(float* gpu_image, int i_width, int i_height,
 				dim3 dim_threads_per_block(threads_per_block, 1, 1);
 				dim3 dim_blocks_per_grid(blocks_per_grid, 1);
 				reduction2048SumKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
-					(gpu_results, temp_size, level);
+					(gpu_results, level);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 				level *= 2;
@@ -1301,7 +1299,7 @@ float calc_min_dist_2048(float* gpu_image, int i_width, int i_height,
 		}
 	}
 
-	// Normal Flip
+	// normal flip
 	for (int off_x = 0; off_x < trans_height; off_x ++) {
 		for (int off_y = 0; off_y < trans_width; off_y += 4) {
 			distance2048NormalFlipKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
@@ -1315,7 +1313,7 @@ float calc_min_dist_2048(float* gpu_image, int i_width, int i_height,
 				dim3 dim_threads_per_block(threads_per_block, 1, 1);
 				dim3 dim_blocks_per_grid(blocks_per_grid, 1);
 				reduction2048SumKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
-					(gpu_results, temp_size, level);
+					(gpu_results, level);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 				level *= 2;
@@ -1338,7 +1336,7 @@ float calc_min_dist_2048(float* gpu_image, int i_width, int i_height,
 		}
 	}
 
-	// Reverse
+	// reverse
 	for (int off_x = 0; off_x < trans_height; off_x ++) {
 		for (int off_y = 0; off_y < trans_width; off_y += 4) {
 			distance2048ReverseKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
@@ -1352,7 +1350,7 @@ float calc_min_dist_2048(float* gpu_image, int i_width, int i_height,
 				dim3 dim_threads_per_block(threads_per_block, 1, 1);
 				dim3 dim_blocks_per_grid(blocks_per_grid, 1);
 				reduction2048SumKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
-					(gpu_results, temp_size, level);
+					(gpu_results, level);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 				level *= 2;
@@ -1375,7 +1373,7 @@ float calc_min_dist_2048(float* gpu_image, int i_width, int i_height,
 		}
 	}
 
-	// Reverse Flip
+	// reverse flip
 	for (int off_x = 0; off_x < trans_height; off_x ++) {
 		for (int off_y = 0; off_y < trans_width; off_y += 4) {
 			distance2048ReverseFlipKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
@@ -1389,7 +1387,7 @@ float calc_min_dist_2048(float* gpu_image, int i_width, int i_height,
 				dim3 dim_threads_per_block(threads_per_block, 1, 1);
 				dim3 dim_blocks_per_grid(blocks_per_grid, 1);
 				reduction2048SumKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
-					(gpu_results, temp_size, level);
+					(gpu_results, level);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 				level *= 2;
@@ -1435,7 +1433,7 @@ __global__ void distance4096NormalKernel(float* gpuImage, float* gpuTemp, float*
 }
 
 __global__ void distance4096NormalFlipKernel(float* gpuImage, float* gpuTemp, float* gpuResult,
-																				 int offX, int offY, int iWidth) {
+																						 int offX, int offY, int iWidth) {
 	float distance
 		= gpuTemp[4096*(blockIdx.y+1) - 512*blockIdx.x - threadIdx.x - 1]
 		- gpuImage[(offX+blockIdx.y)*iWidth + offY + 512*blockIdx.x + threadIdx.x];
@@ -1443,7 +1441,7 @@ __global__ void distance4096NormalFlipKernel(float* gpuImage, float* gpuTemp, fl
 }
 
 __global__ void distance4096ReverseKernel(float* gpuImage, float* gpuTemp, float* gpuResult,
-																					 int offX, int offY, int iWidth, int tempSize) {
+																					int offX, int offY, int iWidth, int tempSize) {
 	float distance
 		= gpuTemp[tempSize - 4096*blockIdx.y - 512*blockIdx.x - threadIdx.x - 1]
 		- gpuImage[(offX+blockIdx.y)*iWidth + offY + 512*blockIdx.x + threadIdx.x];
@@ -1451,7 +1449,7 @@ __global__ void distance4096ReverseKernel(float* gpuImage, float* gpuTemp, float
 }
 
 __global__ void distance4096ReverseFlipKernel(float* gpuImage, float* gpuTemp, float* gpuResult,
-																					 int offX, int offY, int iWidth, int tempSize) {
+																							int offX, int offY, int iWidth, int tempSize) {
 	float distance
 		= gpuTemp[tempSize - 4096*(blockIdx.y+1) + 512*blockIdx.x + threadIdx.x]
 		- gpuImage[(offX+blockIdx.y)*iWidth + offY + 512*blockIdx.x + threadIdx.x];
@@ -1467,22 +1465,21 @@ __global__ void transpose4096Kernel(float* gpuTemp) {
 	}
 }
 
-__global__ void reduction4096Kernel(float* gpuResult, unsigned int tempSize, unsigned int level) {
+__global__ void reduction4096Kernel(float* gpuResult, unsigned int level) {
 	int resultIndex = 2*level*(blockIdx.x*blockDim.x + threadIdx.x);
-	if ((resultIndex + level) < tempSize) {
+	if ((resultIndex + level) < 16777216) {
 		gpuResult[resultIndex] += gpuResult[resultIndex + level];
 	}
 }
 
-float calc_min_dist_4096(float* gpu_image, int i_width, int i_height,
-												 float* gpu_temp, int t_width) {
+float calc_min_dist_4096(float* gpu_image, int i_width, int i_height, float* gpu_temp) {
 
 	float least_distance = FLT_MAX;
 	float new_distance = least_distance;
 
-	int trans_height = i_height - t_width + 1;
-	int trans_width = i_width - t_width + 1;
-	unsigned int temp_size = t_width * t_width;
+	int trans_height = i_height - 4096 + 1;
+	int trans_width = i_width - 4096 + 1;
+	unsigned int temp_size = 4096 * 4096;
 
 	int threads_per_block = 512;
 	int blocks_per_grid = 65535;
@@ -1494,7 +1491,7 @@ float calc_min_dist_4096(float* gpu_image, int i_width, int i_height,
 	dim3 dim_threads_per_block(threads_per_block, 1, 1);
 	dim3 dim_blocks_per_grid(8, 4096);
 
-	// Normal
+	// normal
 	for (int off_x = 0; off_x < trans_height; off_x++) {
 		for (int off_y = 0; off_y < trans_width; off_y++) {
 			distance4096NormalKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
@@ -1507,7 +1504,7 @@ float calc_min_dist_4096(float* gpu_image, int i_width, int i_height,
 			while (level < temp_size) {
 				// printf("%d level reduction with %d blocks\n", level, blocks_per_grid);
 				reduction4096Kernel<<<blocks_per_grid, threads_per_block>>>
-					(gpu_result, temp_size, level);
+					(gpu_result, level);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 				level *= 2;
@@ -1526,7 +1523,7 @@ float calc_min_dist_4096(float* gpu_image, int i_width, int i_height,
 		}
 	}
 
-	// Normal Flip
+	// normal flip
 	for (int off_x = 0; off_x < trans_height; off_x++) {
 		for (int off_y = 0; off_y < trans_width; off_y++) {
 			distance4096NormalFlipKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
@@ -1539,7 +1536,7 @@ float calc_min_dist_4096(float* gpu_image, int i_width, int i_height,
 			while (level < temp_size) {
 				// printf("%d level reduction with %d blocks\n", level, blocks_per_grid);
 				reduction4096Kernel<<<blocks_per_grid, threads_per_block>>>
-					(gpu_result, temp_size, level);
+					(gpu_result, level);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 				level *= 2;
@@ -1558,7 +1555,7 @@ float calc_min_dist_4096(float* gpu_image, int i_width, int i_height,
 		}
 	}
 
-	// Reverse
+	// reverse
 	for (int off_x = 0; off_x < trans_height; off_x++) {
 		for (int off_y = 0; off_y < trans_width; off_y++) {
 			distance4096ReverseKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
@@ -1571,7 +1568,7 @@ float calc_min_dist_4096(float* gpu_image, int i_width, int i_height,
 			while (level != temp_size) {
 				// printf("%d level reduction with %d blocks\n", level, blocks_per_grid);
 				reduction4096Kernel<<<blocks_per_grid, threads_per_block>>>
-					(gpu_result, temp_size, level);
+					(gpu_result, level);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 				level *= 2;
@@ -1590,7 +1587,7 @@ float calc_min_dist_4096(float* gpu_image, int i_width, int i_height,
 		}
 	}
 
-	// Reverse Flip
+	// reverse flip
 	for (int off_x = 0; off_x < trans_height; off_x++) {
 		for (int off_y = 0; off_y < trans_width; off_y++) {
 			distance4096ReverseFlipKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
@@ -1603,7 +1600,7 @@ float calc_min_dist_4096(float* gpu_image, int i_width, int i_height,
 			while (level != temp_size) {
 				// printf("%d level reduction with %d blocks\n", level, blocks_per_grid);
 				reduction4096Kernel<<<blocks_per_grid, threads_per_block>>>
-					(gpu_result, temp_size, level);
+					(gpu_result, level);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 				level *= 2;
@@ -1626,7 +1623,7 @@ float calc_min_dist_4096(float* gpu_image, int i_width, int i_height,
 	cudaThreadSynchronize();
 	CUT_CHECK_ERROR("");
 
-	// Normal
+	// normal
 	for (int off_x = 0; off_x < trans_height; off_x++) {
 		for (int off_y = 0; off_y < trans_width; off_y++) {
 			distance4096NormalKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
@@ -1639,7 +1636,7 @@ float calc_min_dist_4096(float* gpu_image, int i_width, int i_height,
 			while (level < temp_size) {
 				// printf("%d level reduction with %d blocks\n", level, blocks_per_grid);
 				reduction4096Kernel<<<blocks_per_grid, threads_per_block>>>
-					(gpu_result, temp_size, level);
+					(gpu_result, level);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 				level *= 2;
@@ -1658,7 +1655,7 @@ float calc_min_dist_4096(float* gpu_image, int i_width, int i_height,
 		}
 	}
 
-	// Normal Flip
+	// normal flip
 	for (int off_x = 0; off_x < trans_height; off_x++) {
 		for (int off_y = 0; off_y < trans_width; off_y++) {
 			distance4096NormalFlipKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
@@ -1671,7 +1668,7 @@ float calc_min_dist_4096(float* gpu_image, int i_width, int i_height,
 			while (level < temp_size) {
 				// printf("%d level reduction with %d blocks\n", level, blocks_per_grid);
 				reduction4096Kernel<<<blocks_per_grid, threads_per_block>>>
-					(gpu_result, temp_size, level);
+					(gpu_result, level);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 				level *= 2;
@@ -1690,7 +1687,7 @@ float calc_min_dist_4096(float* gpu_image, int i_width, int i_height,
 		}
 	}
 
-	// Reverse
+	// reverse
 	for (int off_x = 0; off_x < trans_height; off_x++) {
 		for (int off_y = 0; off_y < trans_width; off_y++) {
 			distance4096ReverseKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
@@ -1703,7 +1700,7 @@ float calc_min_dist_4096(float* gpu_image, int i_width, int i_height,
 			while (level != temp_size) {
 				// printf("%d level reduction with %d blocks\n", level, blocks_per_grid);
 				reduction4096Kernel<<<blocks_per_grid, threads_per_block>>>
-					(gpu_result, temp_size, level);
+					(gpu_result, level);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 				level *= 2;
@@ -1722,7 +1719,7 @@ float calc_min_dist_4096(float* gpu_image, int i_width, int i_height,
 		}
 	}
 
-	// Reverse Flip
+	// reverse flip
 	for (int off_x = 0; off_x < trans_height; off_x++) {
 		for (int off_y = 0; off_y < trans_width; off_y++) {
 			distance4096ReverseFlipKernel<<<dim_blocks_per_grid, dim_threads_per_block>>>
@@ -1735,7 +1732,7 @@ float calc_min_dist_4096(float* gpu_image, int i_width, int i_height,
 			while (level != temp_size) {
 				// printf("%d level reduction with %d blocks\n", level, blocks_per_grid);
 				reduction4096Kernel<<<blocks_per_grid, threads_per_block>>>
-					(gpu_result, temp_size, level);
+					(gpu_result, level);
 				cudaThreadSynchronize();
 				CUT_CHECK_ERROR("");
 				level *= 2;
@@ -1778,15 +1775,15 @@ float calc_min_dist(float* gpu_image, int i_width, int i_height,
 
 	}	else if (t_width == 1024) {
 
-		return calc_min_dist_1024(gpu_image, i_width, i_height, gpu_temp, t_width);
+		return calc_min_dist_1024(gpu_image, i_width, i_height, gpu_temp);
 
 	}	else if (t_width == 2048) {
 
-		return calc_min_dist_2048(gpu_image, i_width, i_height, gpu_temp, t_width);
+		return calc_min_dist_2048(gpu_image, i_width, i_height, gpu_temp);
 
 	}	else if (t_width == 4096) {
 
-		return calc_min_dist_4096(gpu_image, i_width, i_height, gpu_temp, t_width);
+		return calc_min_dist_4096(gpu_image, i_width, i_height, gpu_temp);
 
 	} else {
 
