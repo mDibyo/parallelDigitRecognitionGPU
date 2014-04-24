@@ -146,6 +146,22 @@ __global__ void distance1024NormalKernel(float* gpuImage, float* gpuTemp, float*
 	}
 }
 
+__global__ void reduction1024SumKernel(float* gpuResults, unsigned int tempSize, insigned int level) {
+	unsigned int resultIndex = 2*level*(blockIdx.x*blockDim.x + threadIdx.x);
+	if ((resultIndex + level) < (tempSize*16)) {
+		gpuResults[resultIndex] = gpuResults[resultIndex + level];
+	}
+}
+
+__global__ void reduction1024MaxKernel(float* gpuResults, unsigned int tempSize, unsigned int level) {
+	unsigned int resultIndex = 2*level*(blockIdx.x*blockDim.x + threadIdx.x);
+	if ((resultIndex + level) < (tempSize*16)) {
+		if (gpuResults[resultIndex + level] < gpuResults[resultIndex]) {
+			gpuResults[resultIndex] = gpuResults[resultIndex + level];
+		}
+	}
+}
+
 
 
 
