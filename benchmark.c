@@ -53,7 +53,7 @@ int benchmark_matrix(int N, int M, int T) {
         return 0;
     } else if (T == 4096) {
         float diff = distance < distance_ref ? distance_ref-distance : distance - distance_ref;
-        if (!(diff / distance_ref < 0.10)) {
+        if (!(diff / distance_ref < 0.0001)) {
             // allow 10% error on 4096 because GPU FP error becomes significant
             // gaming this in an attempt to gain better performance will get you
             // a zero
